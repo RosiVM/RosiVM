@@ -13,7 +13,18 @@
                 "-g",
                 "src/compiler.cpp",
                 "-o",
-                "bin/ggcode"
+                "bin/ggcode",
+
+                // Run `llvm-config --cxxflags --ldflags --system-libs --libs core` to figure these out...
+                "-I/Users/cankov/Downloads/clang+llvm-6.0.0-x86_64-apple-darwin/include",
+                "-L/Users/cankov/Downloads/clang+llvm-6.0.0-x86_64-apple-darwin/lib",
+                "-lLLVMCore",
+                "-lLLVMBinaryFormat",
+                "-lLLVMSupport",
+                "-lLLVMDemangle",
+                "-lz",
+                "-lcurses",
+                "-lm",
             ],
             "group": {
                 "kind": "build",
