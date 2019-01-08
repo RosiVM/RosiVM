@@ -675,6 +675,70 @@ public:
 
     class ValueExpression;
 
+    const static string UnaryOperatorString[8];
+    enum UnaryOperator {
+        // Precedence 12
+        ConditionalNotOperator,
+        UnaryPlusOperator,
+        UnaryMinusOperator,
+        PreIncrementOperator,
+        PreDecrementOperator,
+        BitComplementOperator,
+
+        // Precedence 13
+        PostIncrementOperator,
+        PostDecrementOperator,
+    };
+
+    class UnaryExpression;
+    enum BinaryOperator {
+        AssignmentOperator,
+        AdditionAssignmentOperator,
+        SubtractionAssignmentOperator,
+        MultiplicationAssignmentOperator,
+        DivisionAssignmentOperator,
+        BitAndAssignmentOperator,
+        BitXOrAssignmentOperator,
+        BitOrAssignmentOperator,
+        ReminderAssignmentOperator,
+        LeftShiftAssignmentOperator,
+        RightShiftAssignmentOperator,
+        // Precedence 2
+        ConditionalOrOperator,
+        // Precedence 3
+        ConditionalAndOperator,
+        // Precedence 4
+        BitwiseOrOperator,
+        // Precedence 5
+        BitwiseXOrOperator,
+        // Precedence 6
+        BitwiseAndOperator,
+        // Precedence 7
+        EqualOperator,
+        NotEqualOperator,
+        // Precedence 8
+        LessThanOperator,
+        GreaterThanOperator,
+        LessOrEqualOperator,
+        GreaterOrEqualOperator,
+        // Precedence 9
+        LeftShiftOperator,
+        RightShiftOperator,
+        // Precedence 10
+        AddOperator,
+        SubtractOperator,
+        // Precedence 11
+        MultiplyOperator,
+        DivideOperator,
+        ReminderOperator,
+    };
+    const static string BinaryOperatorString[29];
+
+    static const string toString(UnaryOperator op) { return UnaryOperatorString[op]; }
+    static const string toString(BinaryOperator op) { return BinaryOperatorString[op]; }
+
+    class BinaryExpression;
+
     // Precedence 0
     class AssignmentExpression;
     class AdditionAssignmentExpression;
@@ -750,6 +814,7 @@ public:
 
     class ModuleMemberVisitor;
     class TypeExpressionVisitor;
+    class StatementVisitor;
 
     typedef unique_ptr<Statement> ptr_statement;
     typedef unique_ptr<TypeExpression> ptr_type;
@@ -768,16 +833,30 @@ private:
 public:
 
     class ModuleMemberVisitor {
-    protected:
-        friend class Parser;
+    public:
         virtual void on(Function* f) = 0;
         virtual void on(FunctionDeclaration* f) = 0;
     };
 
     class TypeExpressionVisitor {
-    protected:
-        friend class PrimitiveTypeExpression;
+    public:
         virtual void on(PrimitiveTypeExpression* t) = 0;
+    };
+
+    class StatementVisitor {
+    public:
+        virtual void on(CodeBlock* block) {}
+        virtual void on(ConstStatement* block) {}
+        virtual void on(ReturnStatement* block) {}
+
+        virtual void on(IdentifierExpression* expression) {}
+        virtual void on(ConstantValueExpression* expression) {}
+        virtual void on(MemberAccessExpression* expression) {}
+        virtual void on(InvocationExpression* expression) {}
+        virtual void on(ConditionalIfExpression* expression) {}
+
+        virtual void on(UnaryExpression* expression) {}
+        virtual void on(BinaryExpression* expression) {}
     };
 
     class ModuleMember {
@@ -800,6 +879,7 @@ public:
         vector<unique_ptr<FunctionArgument> >& args() { return _proto->args(); }
         ptr_type& returnType() { return _proto->returnType(); }
         unique_ptr<FunctionPrototype>& proto() { return _proto; }
+        unique_ptr<CodeBlock>& codeBlock() { return _block; }
 
         void visit(ModuleMemberVisitor* visitor) override { visitor->on(this); }
     };
@@ -869,12 +949,16 @@ public:
     class Statement {
     public:
         virtual ~Statement() {}
+        virtual void visit(StatementVisitor* visitor) = 0;
     };
 
     class CodeBlock : public Statement {
         vector<ptr_statement> _statements;
     public:
         CodeBlock(vector<ptr_statement> statements) : _statements(move(statements)) {}
+        vector<ptr_statement>& statements() { return _statements; }
+        void visit(StatementVisitor* visitor) override { visitor->on(this); }
+
     };
 
     class ConstStatement : public Statement {
@@ -888,12 +972,17 @@ public:
             _value(move(value)) {}
 
         string name() { return _identifier.value<string>(); }
+        ptr_type& type() { return _type; }
+        ptr_value& value() { return _value; }
+        void visit(StatementVisitor* visitor) override { visitor->on(this); }
     };
 
     class ReturnStatement : public Statement {
         ptr_value _value;
     public:
         ReturnStatement(ptr_value value) : _value(move(value)) {}
+        ptr_value& value() { return _value; }
+        void visit(StatementVisitor* visitor) override { visitor->on(this); }
     };
 
     class ValueExpression : public Statement {
@@ -905,6 +994,7 @@ public:
         ptr_value _operand;
     public:
         UnaryExpression(ptr_value operand) : _operand(move(operand)) {}
+        virtual UnaryOperator op() = 0;
         ptr_value& operand() { return _operand; }
     };
 
@@ -912,67 +1002,41 @@ public:
         ptr_value _lhs, _rhs;
     public:
         BinaryExpression(ptr_value lhs, ptr_value rhs) : _lhs(move(lhs)), _rhs(move(rhs)) {}
+        virtual BinaryOperator op() = 0;
         ptr_value& lhs() { return _lhs; }
         ptr_value& rhs() { return _rhs; }
     };
 
+    #define UNARY_EXPRESSION_CLASS(CLASS, OPERATOR, PRECEDENCE)\
+    class CLASS : public UnaryExpression {\
+    public:\
+        CLASS(ptr_value operand) : UnaryExpression(move(operand)) {}\
+        ushort precedence() override { return PRECEDENCE; }\
+        UnaryOperator op() override { return OPERATOR; }\
+        void visit(StatementVisitor* visitor) override { visitor->on(this); }\
+    };\
+
+    #define BINARY_EXPRESSION_CLASS(CLASS, OPERATOR, PRECEDENCE)\
+    class CLASS : public BinaryExpression {\
+    public:\
+        CLASS(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}\
+        ushort precedence() override { return PRECEDENCE; }\
+        BinaryOperator op() override { return OPERATOR; }\
+        void visit(StatementVisitor* visitor) override { visitor->on(this); }\
+    };\
+
     // Precedence 0
-    // TODO: Use some wild macro to define all these classes and reduce code-size.
-    class AssignmentExpression : public BinaryExpression {
-    public:
-        AssignmentExpression(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}
-        ushort precedence() override { return 0; }
-    };
-    class AdditionAssignmentExpression : public BinaryExpression {
-    public:
-        AdditionAssignmentExpression(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}
-        ushort precedence() override { return 0; }
-    };
-    class SubtractionAssignmentExpression : public BinaryExpression {
-    public:
-        SubtractionAssignmentExpression(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}
-        ushort precedence() override { return 0; }
-    };
-    class MultiplicationAssignmentExpression : public BinaryExpression {
-    public:
-        MultiplicationAssignmentExpression(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}
-        ushort precedence() override { return 0; }
-    };
-    class DivisionAssignmentExpression : public BinaryExpression {
-    public:
-        DivisionAssignmentExpression(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}
-        ushort precedence() override { return 0; }
-    };
-    class BitAndAssignmentExpression : public BinaryExpression {
-    public:
-        BitAndAssignmentExpression(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}
-        ushort precedence() override { return 0; }
-    };
-    class BitXOrAssignmentExpression : public BinaryExpression {
-    public:
-        BitXOrAssignmentExpression(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}
-        ushort precedence() override { return 0; }
-    };
-    class BitOrAssignmentExpression : public BinaryExpression {
-    public:
-        BitOrAssignmentExpression(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}
-        ushort precedence() override { return 0; }
-    };
-    class ReminderAssignmentExpression : public BinaryExpression {
-    public:
-        ReminderAssignmentExpression(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}
-        ushort precedence() override { return 0; }
-    };
-    class LeftShiftAssignmentExpression : public BinaryExpression {
-    public:
-        LeftShiftAssignmentExpression(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}
-        ushort precedence() override { return 0; }
-    };
-    class RightShiftAssignmentExpression : public BinaryExpression {
-    public:
-        RightShiftAssignmentExpression(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}
-        ushort precedence() override { return 0; }
-    };
+    BINARY_EXPRESSION_CLASS(AssignmentExpression, AssignmentOperator, 0)
+    BINARY_EXPRESSION_CLASS(AdditionAssignmentExpression, AdditionAssignmentOperator, 0)
+    BINARY_EXPRESSION_CLASS(SubtractionAssignmentExpression, SubtractionAssignmentOperator, 0)
+    BINARY_EXPRESSION_CLASS(MultiplicationAssignmentExpression, MultiplicationAssignmentOperator, 0)
+    BINARY_EXPRESSION_CLASS(DivisionAssignmentExpression, DivisionAssignmentOperator, 0)
+    BINARY_EXPRESSION_CLASS(BitAndAssignmentExpression, BitAndAssignmentOperator, 0)
+    BINARY_EXPRESSION_CLASS(BitXOrAssignmentExpression, BitXOrAssignmentOperator, 0)
+    BINARY_EXPRESSION_CLASS(BitOrAssignmentExpression, BitOrAssignmentOperator, 0)
+    BINARY_EXPRESSION_CLASS(ReminderAssignmentExpression, ReminderAssignmentOperator, 0)
+    BINARY_EXPRESSION_CLASS(LeftShiftAssignmentExpression, LeftShiftAssignmentOperator, 0)
+    BINARY_EXPRESSION_CLASS(RightShiftAssignmentExpression, RightShiftAssignmentOperator, 0)
 
     // Precedence 1
     class ConditionalIfExpression : public ValueExpression {
@@ -988,187 +1052,95 @@ public:
         ptr_value& elseExpression() { return _elseExp; }
 
         ushort precedence() override { return 1; }
+        void visit(StatementVisitor* visitor) override { visitor->on(this); }
     };
 
     // Precedence 2
-    class ConditionalOrExpression : public BinaryExpression {
-    public:
-        ConditionalOrExpression(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}
-        ushort precedence() override { return 2; }
-    };
+    BINARY_EXPRESSION_CLASS(ConditionalOrExpression, ConditionalOrOperator, 2)
 
     // Precedence 3
-    class ConditionalAndExpression : public BinaryExpression {
-    public:
-        ConditionalAndExpression(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}
-        ushort precedence() override { return 3; }
-    };
+    BINARY_EXPRESSION_CLASS(ConditionalAndExpression, ConditionalAndOperator, 3)
 
     // Precedence 4
-    class BitwiseOrExpression : public BinaryExpression {
-    public:
-        BitwiseOrExpression(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}
-        ushort precedence() override { return 4; }
-    };
+    BINARY_EXPRESSION_CLASS(BitwiseOrExpression, BitwiseOrOperator, 4)
 
     // Precedence 5
-    class BitwiseXOrExpression : public BinaryExpression {
-    public:
-        BitwiseXOrExpression(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}
-        ushort precedence() override { return 5; }
-    };
+    BINARY_EXPRESSION_CLASS(BitwiseXOrExpression, BitwiseXOrOperator, 5)
 
     // Precedence 6
-    class BitwiseAndExpression : public BinaryExpression {
-    public:
-        BitwiseAndExpression(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}
-        ushort precedence() override { return 6; }
-    };
+    BINARY_EXPRESSION_CLASS(BitwiseAndExpression, BitwiseAndOperator, 6)
 
     // Precedence 7
-    class EqualExpression : public BinaryExpression {
-    public:
-        EqualExpression(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}
-        ushort precedence() override { return 7; }
-    };
-    class NotEqualExpression : public BinaryExpression {
-    public:
-        NotEqualExpression(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}
-        ushort precedence() override { return 7; }
-    };
+    BINARY_EXPRESSION_CLASS(EqualExpression, EqualOperator, 7)
+    BINARY_EXPRESSION_CLASS(NotEqualExpression, NotEqualOperator, 7)
 
     // Precedence 8
-    class LessThanExpression : public BinaryExpression {
-    public:
-        LessThanExpression(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}
-        ushort precedence() override { return 8; }
-    };
-    class GreaterThanExpression : public BinaryExpression {
-    public:
-        GreaterThanExpression(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}
-        ushort precedence() override { return 8; }
-    };
-    class LessOrEqualExpression : public BinaryExpression {
-    public:
-        LessOrEqualExpression(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}
-        ushort precedence() override { return 8; }
-    };
-    class GreaterOrEqualExpression : public BinaryExpression {
-    public:
-        GreaterOrEqualExpression(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}
-        ushort precedence() override { return 8; }
-    };
+    BINARY_EXPRESSION_CLASS(LessThanExpression, LessThanOperator, 8)
+    BINARY_EXPRESSION_CLASS(GreaterThanExpression, GreaterThanOperator, 8)
+    BINARY_EXPRESSION_CLASS(LessOrEqualExpression, LessOrEqualOperator, 8)
+    BINARY_EXPRESSION_CLASS(GreaterOrEqualExpression, GreaterOrEqualOperator, 8)
 
     // Precedence 9
-    class LeftShiftExpression : public BinaryExpression {
-    public:
-        LeftShiftExpression(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}
-        ushort precedence() override { return 9; }
-    };
-    class RightShiftExpression : public BinaryExpression {
-    public:
-        RightShiftExpression(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}
-        ushort precedence() override { return 9; }
-    };
+    BINARY_EXPRESSION_CLASS(LeftShiftExpression, LeftShiftOperator, 9)
+    BINARY_EXPRESSION_CLASS(RightShiftExpression, RightShiftOperator, 9)
     
     // Precedence 10
-    class AddExpression : public BinaryExpression {
-    public:
-        AddExpression(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}
-        ushort precedence() override { return 10; }
-    };
-    class SubtractExpression : public BinaryExpression {
-    public:
-        SubtractExpression(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}
-        ushort precedence() override { return 10; }
-    };
+    BINARY_EXPRESSION_CLASS(AddExpression, AddOperator, 10)
+    BINARY_EXPRESSION_CLASS(SubtractExpression, SubtractOperator, 10)
 
     // Precedence 11
-    class MultiplyExpression : public BinaryExpression {
-    public:
-        MultiplyExpression(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}
-        ushort precedence() override { return 11; }
-    };
-    class DivideExpression : public BinaryExpression {
-    public:
-        DivideExpression(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}
-        ushort precedence() override { return 11; }
-    };
-    class ReminderExpression : public BinaryExpression {
-    public:
-        ReminderExpression(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}
-        ushort precedence() override { return 11; }
-    };
+    BINARY_EXPRESSION_CLASS(MultiplyExpression, MultiplyOperator, 11)
+    BINARY_EXPRESSION_CLASS(DivideExpression, DivideOperator, 11)
+    BINARY_EXPRESSION_CLASS(ReminderExpression, ReminderOperator, 11)
 
     // Precedence 12
-    class ConditionalNotExpression : public UnaryExpression {
-    public:
-        ConditionalNotExpression(ptr_value operand) : UnaryExpression(move(operand)) {}
-        ushort precedence() override { return 12; }
-    };
-    class UnaryPlusExpression : public UnaryExpression {
-    public:
-        UnaryPlusExpression(ptr_value operand) : UnaryExpression(move(operand)) {}
-        ushort precedence() override { return 12; }
-    };
-    class UnaryMinusExpression : public UnaryExpression {
-    public:
-        UnaryMinusExpression(ptr_value operand) : UnaryExpression(move(operand)) {}
-        ushort precedence() override { return 12; }
-    };
-    class PreIncrementExpression : public UnaryExpression {
-    public:
-        PreIncrementExpression(ptr_value operand) : UnaryExpression(move(operand)) {}
-        ushort precedence() override { return 12; }
-    };
-    class PreDecrementExpression : public UnaryExpression {
-    public:
-        PreDecrementExpression(ptr_value operand) : UnaryExpression(move(operand)) {}
-        ushort precedence() override { return 12; }
-    };
-    class BitComplementExpression : public UnaryExpression {
-    public:
-        BitComplementExpression(ptr_value operand) : UnaryExpression(move(operand)) {}
-        ushort precedence() override { return 12; }
-    };
+    UNARY_EXPRESSION_CLASS(ConditionalNotExpression, ConditionalNotOperator, 12);
+    UNARY_EXPRESSION_CLASS(UnaryPlusExpression, UnaryPlusOperator, 12);
+    UNARY_EXPRESSION_CLASS(UnaryMinusExpression, UnaryMinusOperator, 12);
+    UNARY_EXPRESSION_CLASS(PreIncrementExpression, PreIncrementOperator, 12);
+    UNARY_EXPRESSION_CLASS(PreDecrementExpression, PreDecrementOperator, 12);
+    UNARY_EXPRESSION_CLASS(BitComplementExpression, BitComplementOperator, 12);
 
     // Precedence 13 Expressions
     class IdentifierExpression : public ValueExpression {
         Token _identifier;
     public:
         IdentifierExpression(Token identifier) : _identifier(identifier) {}
-        ushort precedence() override { return 13; }
         string name() { return _identifier.value<string>(); }
+        ushort precedence() override { return 13; }
+        void visit(StatementVisitor* visitor) override { visitor->on(this); }
     };
     class ConstantValueExpression : public ValueExpression {
         Token _literal;
     public:
         ConstantValueExpression(Token literal) : _literal(literal) {}
         ushort precedence() override { return 13; }
+        Token literal() { return _literal; }
+        void visit(StatementVisitor* visitor) override { visitor->on(this); }
     };
-    class MemberAccessExpression : public UnaryExpression {
+    class MemberAccessExpression : public ValueExpression {
         Token _name;
+        ptr_value _operand;
     public:
-        MemberAccessExpression(ptr_value operand, Token name) : UnaryExpression(move(operand)), _name(name) {}
-        ushort precedence() override { return 13; }
+        MemberAccessExpression(ptr_value operand, Token name) : _operand(move(operand)), _name(name) {}
+        ptr_value& operand() { return _operand; }
         string name() { return _name.value<string>(); }
+        ushort precedence() override { return 13; }
+        void visit(StatementVisitor* visitor) override { visitor->on(this); }
     };
-    class InvocationExpression : public UnaryExpression {
+    class InvocationExpression : public ValueExpression {
         vector<ptr_value> _values;
+        ptr_value _operand;
     public:
-        InvocationExpression(ptr_value lhs, vector<ptr_value> values) : UnaryExpression(move(lhs)), _values(move(values)) {}
+        InvocationExpression(ptr_value lhs, vector<ptr_value> values) : _operand(move(lhs)), _values(move(values)) {}
+        ptr_value& operand() { return _operand; }
         ushort precedence() override { return 13; }
+        vector<ptr_value>& values() { return _values; }
+        void visit(StatementVisitor* visitor) override { visitor->on(this); }
     };
-    class PostIncrementExpression : public UnaryExpression {
-    public:
-        PostIncrementExpression(ptr_value operand) : UnaryExpression(move(operand)) {}
-        ushort precedence() override { return 13; }
-    };
-    class PostDecrementExpression : public UnaryExpression {
-    public:
-        PostDecrementExpression(ptr_value operand) : UnaryExpression(move(operand)) {}
-        ushort precedence() override { return 13; }
-    };
+
+    UNARY_EXPRESSION_CLASS(PostIncrementExpression, PostIncrementOperator, 13);
+    UNARY_EXPRESSION_CLASS(PostDecrementExpression, PostDecrementOperator, 13);
 
     Parser(string code) :
         _lexer(Lexer(code)),
@@ -1681,6 +1653,62 @@ private:
     }
 };
 
+const string Parser::UnaryOperatorString[8] = {
+    // Precedence 12
+    "!"s, // ConditionalNotOperator
+    "+"s, // UnaryPlusOperator
+    "-"s, // UnaryMinusOperator
+    "++"s, // PreIncrementOperator
+    "--"s, // PreDecrementOperator
+    "~"s, // BitComplementOperator
+    // Precedence 13
+    "++"s, // PostIncrementOperator,
+    "--"s, // PostDecrementOperator,
+};
+
+const string Parser::BinaryOperatorString[29] = {
+    // Precedence 0
+    "="s, // AssignmentOperator,
+    "+="s, // AdditionAssignmentOperator,
+    "-="s, // SubtractionAssignmentOperator,
+    "*="s, // MultiplicationAssignmentOperator,
+    "/="s, // DivisionAssignmentOperator,
+    "&="s, // BitAndAssignmentOperator,
+    "^="s, // BitXOrAssignmentOperator,
+    "|="s, // BitOrAssignmentOperator,
+    "%="s, // ReminderAssignmentOperator,
+    "<<="s, // LeftShiftAssignmentOperator,
+    ">>="s, // RightShiftAssignmentOperator,
+    // Precedence 2
+    "||"s, // ConditionalOrOperator,
+    // Precedence 3
+    "&&"s, // ConditionalAndOperator,
+    // Precedence 4
+    "|"s, // BitwiseOrOperator,
+    // Precedence 5
+    "^"s, // BitwiseXOrOperator,
+    // Precedence 6
+    "&"s, // BitwiseAndOperator,
+    // Precedence 7
+    "=="s, // EqualOperator,
+    "!="s, // NotEqualOperator,
+    // Precedence 8
+    "<"s, // LessThanOperator,
+    ">"s, // GreaterThanOperator,
+    "<="s, // LessOrEqualOperator,
+    ">="s, // GreaterOrEqualOperator,
+    // Precedence 9
+    "<<"s, // LeftShiftOperator,
+    ">>"s, // RightShiftOperator,
+    // Precedence 10
+    "+"s, // AddOperator,
+    "-"s, // SubtractOperator,
+    // Precedence 11
+    "*"s, // MultiplyOperator,
+    "/"s, // DivideOperator,
+    "%"s, // ReminderOperator,
+};
+
 /// EXPLORATION TESTS ///
 
 void printTokens(string program) {
@@ -1712,8 +1740,9 @@ void testSimpleProgram3() {
     printTokens(program);
 }
 
-class ASTPrinter : public Parser::ModuleMemberVisitor, public Parser::TypeExpressionVisitor {
-protected:
+// Debug AST printer
+class ASTPrinter : public Parser::ModuleMemberVisitor, public Parser::TypeExpressionVisitor, public Parser::StatementVisitor {
+public:
     void on(Parser::Function* f) override {
         cout << "function " << f->name() << "(";
         bool firstArg = true;
@@ -1724,12 +1753,13 @@ protected:
             firstArg = false;
         }
         cout << ")";
+
         if (f->returnType()) {
             cout << ": ";
             f->returnType()->visit(this);
         }
-        // TODO: Statement block visitor.
-        cout << ";" << endl;
+
+        f->codeBlock()->visit(this);
     }
 
     void on(Parser::FunctionDeclaration* f) override {
@@ -1765,6 +1795,86 @@ protected:
                 break;
         }
     }
+
+    // Statements
+    void on(Parser::CodeBlock* statement) override {
+        cout << " {" << endl;
+        for (auto& statement : statement->statements()) {
+            statement->visit(this);
+        }
+        cout << "}" << endl;
+    }
+    void on(Parser::ConstStatement* statement) override {
+        cout << "const " << statement->name();
+        Parser::ptr_type& type = statement->type();
+        if (type != nullptr) {
+            cout << ": ";
+            type->visit(this);
+        }
+        Parser::ptr_value& value = statement->value();
+        cout << " = ";
+        value->visit(this);
+        cout << ";" << endl;
+    }
+    void on(Parser::ReturnStatement* statement) override {
+        cout << "return";
+        Parser::ptr_value& value = statement->value();
+        if (value != nullptr) {
+            cout << " ";
+            value->visit(this);
+        }
+        cout << ";" << endl;
+    }
+
+    // Value expressions
+    void on(Parser::IdentifierExpression* expression) override {
+        cout << expression->name();
+    }
+    void on(Parser::ConstantValueExpression* expression) override {
+        cout << expression->literal().code();
+    }
+    void on(Parser::MemberAccessExpression* expression) override {
+        cout << "?";
+    }
+    void on(Parser::InvocationExpression* expression) override {
+        expression->operand()->visit(this);
+        cout << "(";
+        bool isFirst = true;
+        for(auto& value : expression->values()) {
+            if (!isFirst) cout << ", ";
+            isFirst = false;
+            value->visit(this);
+        }
+        cout << ")";
+    }
+    void on(Parser::ConditionalIfExpression* expression) override {
+        cout << "?";
+    }
+
+    void on(Parser::UnaryExpression* expression) override {
+        switch(expression->op()) {
+            case Parser::UnaryOperator::ConditionalNotOperator: cout << "!"s; break;
+            case Parser::UnaryOperator::UnaryPlusOperator: cout << "+"s; break;
+            case Parser::UnaryOperator::UnaryMinusOperator: cout << "-"s; break;
+            case Parser::UnaryOperator::PreIncrementOperator: cout << "++"s; break;
+            case Parser::UnaryOperator::PreDecrementOperator: cout << "--"s; break;
+            case Parser::UnaryOperator::BitComplementOperator: cout << "~"s; break;
+            default:;
+        }
+
+        expression->operand()->visit(this);
+
+        switch(expression->op()) {
+            case Parser::UnaryOperator::PostIncrementOperator: cout << "++"s; break;
+            case Parser::UnaryOperator::PostDecrementOperator: cout << "--"s; break;
+            default:;
+        }
+    }
+    void on(Parser::BinaryExpression* expression) override {
+        expression->lhs()->visit(this);
+        cout << " "s << Parser::toString(expression->op()) << " "s;
+        expression->rhs()->visit(this);
+    }
 };
 
 // #include "llvm/ADT/APFloat.h"
@@ -1788,7 +1898,7 @@ static IRBuilder<> Builder(TheContext);
 static std::unique_ptr<Module> TheModule;
 
 class LLIRCompiler : public Parser::ModuleMemberVisitor {
-protected:
+public:
     void on(Parser::Function* f) override {
         cout << "compile " << f->name() << endl;
 
@@ -1818,11 +1928,6 @@ protected:
             Arg.setName(name);
         }
     }
-
-    // // ExpressionVisitor, on float
-    // void on(Parser::Float) {
-    //     ConstantFP::get(TheContext, APFloat(15.0));
-    // }
 };
 
 void testSimpleProgramAST1() {
@@ -1830,7 +1935,8 @@ void testSimpleProgramAST1() {
         "declare function sin(angle: float): float;\r\n"s
         "declare function cos(angle: float): float;\r\n"s
         "function main(): float {\r\n"s
-        "    const x = sin(15.0) + cos(15.0);"s
+        "    const x = sin(15.0) + cos(15.0) * 2;"s
+        "    const y = 2 * sin(15.0) + cos(15.0);"s
         "    return x;"s
         "}"s;
 
