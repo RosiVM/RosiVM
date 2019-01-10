@@ -51,7 +51,7 @@ namespace rvm {
             PostIncrementOperator,
             PostDecrementOperator,
         };
-        const static std::string UnaryOperatorString[8];
+        extern const std::string UnaryOperatorString[8];
 
         class UnaryExpression;
         enum BinaryOperator {
@@ -95,7 +95,7 @@ namespace rvm {
             DivideOperator,
             ReminderOperator,
         };
-        const static std::string BinaryOperatorString[29];
+        extern const std::string BinaryOperatorString[29];
 
         inline const std::string toString(UnaryOperator op) { return UnaryOperatorString[op]; }
         inline const std::string toString(BinaryOperator op) { return BinaryOperatorString[op]; }

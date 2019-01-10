@@ -16,6 +16,7 @@
                 "src/source.cpp",
                 "src/parser.cpp",
                 "src/print.cpp",
+                "src/ast.cpp",
                 "src/compiler.cpp",
 
                 "-o",

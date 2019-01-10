@@ -2,7 +2,7 @@
 
 using namespace std;
 
-const string rvm::ast::UnaryOperatorString[8] = {
+const string rvm::ast::UnaryOperatorString[8] {
     // Precedence 12
     "!"s, // ConditionalNotOperator
     "+"s, // UnaryPlusOperator
@@ -15,7 +15,7 @@ const string rvm::ast::UnaryOperatorString[8] = {
     "--"s, // PostDecrementOperator,
 };
 
-const string rvm::ast::BinaryOperatorString[29] = {
+const string rvm::ast::BinaryOperatorString[29] {
     // Precedence 0
     "="s, // AssignmentOperator,
     "+="s, // AdditionAssignmentOperator,

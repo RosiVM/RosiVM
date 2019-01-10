@@ -3,8 +3,6 @@
 
 #include "ast.h"
 
-// TODO: Don't hardcode cout. Instead support something like `cout << ASTPrinter(module) << endl;` instead. Or define ostream << Module.
-
 namespace rvm {
     class ASTPrinter :
         public rvm::ast::ModuleMemberVisitor,
