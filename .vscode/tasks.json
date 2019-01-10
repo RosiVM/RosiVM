@@ -11,9 +11,13 @@
                 "-std=c++17",
                 "-stdlib=libc++",
                 "-g",
+
+                "src/lexer.cpp",
+                "src/source.cpp",
+                "src/parser.cpp",
+                "src/print.cpp",
                 "src/compiler.cpp",
-                "src/lex.cpp",
-                "src/src.cpp",
+
                 "-o",
                 "bin/ggcode",
 

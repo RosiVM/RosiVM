@@ -1,5 +1,5 @@
-#ifndef RVM_SRC_H
-#define RVM_SRC_H
+#ifndef RVM_SOURCE_H
+#define RVM_SOURCE_H
 
 #include <string>
 #include <map>

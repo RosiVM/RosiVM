@@ -1,9 +1,9 @@
-#ifndef RVM_LEX_H
-#define RVM_LEX_H
+#ifndef RVM_LEXER_H
+#define RVM_LEXER_H
 
 #include <string>
 #include <variant>
-#include "src.h"
+#include "source.h"
 
 namespace rvm {
     enum class TokenType : unsigned int {

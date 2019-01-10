@@ -2,7 +2,7 @@
 #include <map>
 #include <cassert>
 
-#include "lex.h"
+#include "lexer.h"
 
 using namespace std;
 using namespace rvm;
