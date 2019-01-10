@@ -12,6 +12,8 @@
                 "-stdlib=libc++",
                 "-g",
                 "src/compiler.cpp",
+                "src/lex.cpp",
+                "src/src.cpp",
                 "-o",
                 "bin/ggcode",
 

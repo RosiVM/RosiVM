@@ -1,657 +1,11 @@
-#include <iostream>
 #include <vector>
 #include <map>
 #include <cassert>
-#include <exception>
-#include <variant>
+
+#include "lex.h"
 
 using namespace std;
-
-/// LEXER ///
-
-enum TokenType {
-    EoF = 0,
-
-    // Complex expressions
-    Identifier, // a-zA-Z_ and any code >127 followed by a-zA-Z_0-9 and any code >127
-    Integer, // uint8, uint16, uint32, uint64
-    Float, // float32, float64
-    Whitespace, // \r\n, white space, tabulation
-    DoubleQuotesString, // ""
-    SingleQuotesString, // ''
-
-    // Keywords
-    DeclareKeyword, // declare
-    FunctionKeyword, // function
-    VoidKeyword, // void
-    NeverKeyword, // never
-    BoolKeyword, // bool
-    IntKeyword, // int
-    FloatKeyword, // float
-    StringKeyword, // string
-    VarKeyword, // var
-    ConstKeyword, // const
-    ReturnKeyword, // return
-
-    // Operator symbols
-    OpenParenthesis, // (
-    CloseParenthesis, // )
-    LeftBracket, // [
-    RightBracket, // ]
-    LeftBrace, // {
-    RightBrace, // }
-    Colon, // :
-    Semicolon, // ;
-    Comma, // ,
-    Dot, // .
-
-    Assignment, // =
-    Equal, // ==
-    Less, // <
-    LessOrEqual, // <=
-    Greater, // >
-    GreaterOrEqual, // >=
-    NotEqual, // !=
-
-    Plus, // +
-    Minus, // -
-    Multiply, // *
-    Divide, // /
-    Reminder, // % calculates the reminder after dividing
-
-    BitwiseAnd, // &
-    BitwiseOr, // |
-    BitwiseXOr, // ^
-
-    Question, // ?
-    BitComplement, // ~
-    
-    Increment, // ++
-    Decrement, // --
-
-    ConditionalAnd, // &&
-    ConditionalOr, // ||
-    ConditionalNot, // !
-    
-    LeftShift, // <<
-    RightShift, // >>
-
-    AdditionAssignment, // +=
-    SubtractionAssignment, // -=
-    MultiplicationAssignment, // *=
-    DivisionAssignment, // /=
-    ReminderAssignment, // %=
-
-    BitAndAssignment, // &=
-    BitOrAssignment, // |=
-    BitXOrAssignment, // ^=
-    
-    LeftShiftAssignment, // <<=
-    RightShiftAssignment, // >>=
-
-    PointerMemberAccess, // ->
-    NullCoalescing, // ??
-    LambdaOperator, // =>
-};
-
-string tokenTypeNames[] = {
-    "EoF",
-
-    // Complex expressions
-    "Identifier", // a-zA-Z_ and any code >127 followed by a-zA-Z_0-9 and any code >127
-    "Integer", // uint8, uint16, uint32, uint64
-    "Float", // float32, float64
-    "Whitespace", // \r\n, white space, tabulation
-    "DoubleQuotesString", // ""
-    "SingleQuotesString", // ''
-
-    // Keywords
-    "DeclareKeyword", // declare
-    "FunctionKeyword", // function
-    "VoidKeyword", // void
-    "NeverKeyword", // never
-    "BoolKeyword", // bool
-    "IntKeyword", // int
-    "FloatKeyword", // float
-    "StringKeyword",
-    "VarKeyword", // var
-    "ConstKeyword", // const
-    "ReturnKeyword", // return
-
-    // Operator symbols
-    "OpenParenthesis", // (
-    "CloseParenthesis", // )
-    "LeftBracket", // [
-    "RightBracket", // ]
-    "LeftBrace", // {
-    "RightBrace", // }
-    "Colon", // :
-    "Semicolon", // ;
-    "Comma", // ,
-    "Dot", // .
-
-    "Assignment", // =
-    "Equal", // ==
-    "Less", // <
-    "LessOrEqual", // <=
-    "Greater", // >
-    "GreaterOrEqual", // >=
-    "NotEqual", // !=
-
-    "Plus", // +
-    "Minus", // -
-    "Multiply", // *
-    "Divide", // /
-    "Reminder", // % calculates the reminder after dividing
-
-    "BitwiseAnd", // &
-    "BitwiseOr", // |
-    "BitwiseXOr", // ^
-
-    "Question", // ?
-    "BitComplement", // ~
-    
-    "Increment", // ++
-    "Decrement", // --
-
-    "ConditionalAnd", // &&
-    "ConditionalOr", // ||
-    "ConditionalNot", // !
-    
-    "LeftShift", // <<
-    "RightShift", // >>
-
-    "AdditionAssignment", // +=
-    "SubtractionAssignment", // -=
-    "MultiplicationAssignment", // *=
-    "DivisionAssignment", // /=
-    "ReminderAssignment", // %=
-
-    "BitAndAssignment", // &=
-    "BitOrAssignment", // |=
-    "BitXOrAssignment", // ^=
-    
-    "LeftShiftAssignment", // <<=
-    "RightShiftAssignment", // >>=
-
-    "PointerMemberAccess", // ->
-    "NullCoalescing", // ??
-    "LambdaOperator", // =>
-};
-
-string name(TokenType type) {
-    return tokenTypeNames[type];
-}
-
-map<string, TokenType> keywords {
-    { "declare", DeclareKeyword },
-    { "function", FunctionKeyword },
-    { "void"s, VoidKeyword },
-    { "never"s, NeverKeyword },
-    { "bool"s, BoolKeyword },
-    { "int"s, IntKeyword },
-    { "float"s, FloatKeyword },
-    { "string"s, StringKeyword },
-    { "var"s, VarKeyword },
-    { "const"s, ConstKeyword },
-    { "return"s, ReturnKeyword },
-};
-
-map<string, TokenType> operatorSymbols {
-    { "("s, OpenParenthesis },
-    { ")"s, CloseParenthesis },
-    { "["s, LeftBracket },
-    { "]"s, RightBracket },
-    { "{"s, LeftBrace },
-    { "}"s, RightBrace },
-    { ":"s, Colon },
-    { ";"s, Semicolon },
-    { ","s, Comma },
-    { "."s, Dot },
-
-    { "="s, Assignment },
-    { "=="s, Equal },
-    { "<"s, Less },
-    { "<="s, LessOrEqual },
-    { ">"s, Greater },
-    { ">="s, GreaterOrEqual },
-    { "!="s, NotEqual },
-
-    { "+"s, Plus },
-    { "-"s, Minus },
-    { "*"s, Multiply },
-    { "/"s, Divide },
-    { "%"s, Reminder },
-
-    { "&"s, BitwiseAnd },
-    { "|"s, BitwiseOr },
-    { "^"s, BitwiseXOr },
-
-    { "?"s, Question },
-    { "~"s, BitComplement },
-    
-    { "++"s, Increment },
-    { "--"s, Decrement },
-
-    { "&&"s, ConditionalAnd },
-    { "||"s, ConditionalOr },
-    { "!"s, ConditionalNot },
-    
-    { "<<"s, LeftShift },
-    { ">>"s, RightShift },
-
-    { "+="s, AdditionAssignment },
-    { "-="s, SubtractionAssignment },
-    { "*="s, MultiplicationAssignment },
-    { "/="s, DivisionAssignment },
-    { "%="s, ReminderAssignment },
-
-    { "&="s, BitAndAssignment },
-    { "|="s, BitOrAssignment },
-    { "^="s, BitXOrAssignment },
-    
-    { "<<="s, LeftShiftAssignment },
-    { ">>="s, RightShiftAssignment },
-
-    { "->", PointerMemberAccess },
-    { "??", NullCoalescing },
-    { "=>", LambdaOperator },
-};
-
-enum ErrorCode {
-    // Lexer errors
-    UnexpectedEoF = 1001,
-    UnexpectedCharacter = 1002,
-    ExpectedADigit = 1003,
-    NumberOverflow = 1004,
-
-    // Parser errors
-    UnexpectedParserEoF = 2001,
-    UnexpectedToken = 2002,
-    ExpectedIdentifier = 2003,
-};
-
-map<ErrorCode, string> errorCodeDescription = {
-    // Lexer errors
-    { UnexpectedEoF, "Lexer error, unexpected end of file."s },
-    { UnexpectedCharacter, "Lexed error, unexpected character."s },
-    { ExpectedADigit, "Lexed error, expected a digit from 0 to 9."s },
-    { NumberOverflow, "Lexed error, number too large."s },
-
-    // Parser errors
-    { UnexpectedEoF, "Parser error, unexpected end of file."s },
-    { UnexpectedToken, "Parser error, unexpected token."s },
-    { ExpectedIdentifier, "Parser error, expected an identifier."s },
-};
-
-typedef typename string::iterator StringIterator;
-typedef typename string::value_type Char;
-
-struct SourcePoint {
-    unsigned int line, column;
-    SourcePoint() : line(1), column(1) {}
-
-    string toString() const {
-        return to_string(line) + ":"s + to_string(column);
-    }
-
-    bool operator==(const SourcePoint& other) const {
-        return line == other.line && column == other.column;
-    }
-};
-
-struct SourceSpan {
-    SourcePoint start;
-    SourcePoint end;
-
-    string toString() const {
-        return start == end ? start.toString() : start.toString() + "-"s + end.toString();
-    }
-
-    bool operator==(const SourceSpan& other) const {
-        return start == other.start && end == other.end;
-    }
-};
-
-struct StringSpan {
-    StringIterator start;
-    StringIterator end;
-
-    string toString() const { return string(start, end); }
-};
-
-ostream& operator<< (ostream& out, const SourcePoint& point) {
-    return out << point.line << ":" << point.column;
-}
-
-ostream& operator<< (ostream& out, const SourceSpan& span) {
-    if (span.start == span.end) {
-        return out << span.start;
-    } else {
-        return out << span.start << "-" << span.end;
-    }
-}
-
-class CompilerError : public exception {
-    ErrorCode _code;
-    SourceSpan _span;
-
-    string _message;
-
-public:
-    CompilerError(ErrorCode code, SourceSpan span) :
-        _code(code),
-        _span(span),
-        _message(errorCodeDescription[code] + " ("s + span.toString() + ")") {
-    }
-
-    CompilerError(ErrorCode code, SourcePoint point) : CompilerError(code, {point, point}) {}
-
-    SourceSpan span() { return _span; }
-
-    virtual const char* what() const throw() { return _message.c_str(); }
-};
-
-class Lexer {
-    string _code;
-
-public:
-    Lexer(string code): _code(code) {}
-
-    class TokenIterator;
-    class Token;
-
-    class Token {
-        TokenType _type;
-        variant<unsigned long long, double, string> _value;
-
-        SourceSpan _sourceSpan;
-        StringSpan _stringSpan;
-
-    public:
-        friend class TokenIterator;
-
-        Token() : _type(TokenType::EoF), _value(0ULL) {}
-
-        const TokenType& type() const { return _type; }
-
-        template<typename T>
-        T value() { return get<T>(_value); }
-
-        const SourceSpan span() const { return _sourceSpan; }
-        string code() const { return _stringSpan.toString(); }
-        
-        bool operator == (const TokenType type) const { return _type == type; }
-        bool operator != (const TokenType type) const { return _type != type; }
-        operator bool() const { return _type != EoF; }
-        operator TokenType() const { return _type; }
-    };
-
-    class TokenIterator {
-        StringIterator _current;
-        StringIterator _end;
-
-        Token _token;
-        SourcePoint _point;
-        Char _lookaheadChar;
-
-    public:
-        typedef input_iterator_tag iterator_category;
-
-        TokenIterator(StringIterator begin, StringIterator end) :
-            _current(begin),
-            _end(end),
-            _lookaheadChar(_current == _end ? 0 : *_current) {
-
-            consumeNext();
-        }
-
-        TokenIterator& operator++() {
-            consumeNext();
-            return *this;
-        }
-
-        TokenIterator operator++(int) {
-            TokenIterator result(*this);
-            ++(*this);
-            return result;
-        }
-
-        bool operator == (const TokenIterator& other) {
-            return _end == other._end
-                && _current == other._current
-                && _token._type == other._token._type;
-        }
-
-        bool operator != (const TokenIterator& other) {
-            return _end != other._end
-                || _current != other._current
-                || _token._type != other._token._type;
-        }
-
-        const Token& operator*() const { return _token; }
-        const Token* operator->() const { return &_token; }
-
-    private:
-
-        Char consumeChar() {
-            Char c = _lookaheadChar;
-            if (c == '\n') {
-                _point.column = 1;
-                _point.line++;
-            } else {
-                _point.column++;
-            }
-            _lookaheadChar = _current == _end ? 0 : *++_current;
-            return c;
-        }
-
-        bool isEoF() { return _lookaheadChar == 0; }
-        bool isChar() { return (_lookaheadChar >= 'a' && _lookaheadChar <= 'z') || (_lookaheadChar >= 'A' && _lookaheadChar <= 'Z') || (_lookaheadChar > 127); }
-        bool isNumber() { return _lookaheadChar >= '0' && _lookaheadChar <= '9'; }        
-        bool isWhitespace() { return _lookaheadChar == ' ' || _lookaheadChar == '\t' || _lookaheadChar == '\n' || _lookaheadChar == '\r'; }
-        bool isIdentifierLeadChar() { return isChar() || _lookaheadChar == '_'; }
-        bool isOperatorLeadChar() {
-            string op;
-            op += _lookaheadChar;
-            return operatorSymbols.find(op) != operatorSymbols.end();
-        }
-        bool isIdentifierTailChar() { return isIdentifierLeadChar() || isNumber(); }
-        bool isDoubleQuoteChar() { return _lookaheadChar == '"'; }
-        bool isSingleQuoteChar() { return _lookaheadChar == '\''; }
-
-        void consumeIdentifier() {
-            string identifier;
-            assert(isIdentifierLeadChar());
-            identifier += consumeChar();
-
-            while(isIdentifierTailChar()) identifier += consumeChar();
-
-            auto keyword = keywords.find(identifier);
-            if (keyword == keywords.end()) {
-                _token._type = TokenType::Identifier;
-                _token._value = identifier;
-            } else {
-                _token._type = keyword->second;
-                _token._value = 0ULL;
-            }
-        }
-
-        void consumeSingleCharToken(const Char& c, const TokenType& type) {
-            ++_point.column;
-            _token._type = type;
-            _token._value = 0ULL;
-        }
-
-        void consumeWhitespace() {
-            while(isWhitespace()) consumeChar();
-            _token._type = TokenType::Whitespace;
-            _token._value = 0ULL;
-        }
-
-        void consumeString() {
-            Char terminator = consumeChar();
-            assert(terminator == '\'' || terminator == '"');
-            string value;
-            do {
-                if (isEoF()) throw CompilerError(UnexpectedEoF, _point);
-                if (_lookaheadChar == '\r' || _lookaheadChar == '\n') throw CompilerError(UnexpectedCharacter, _point);
-
-                if (_lookaheadChar == '\\') {
-                    assert(false); // TODO: Handle escape sequences...
-                } else if (_lookaheadChar == terminator) {
-                    consumeChar();
-                    _token._value = value;
-                    return;
-                } else {
-                    value += consumeChar();
-                }
-            }
-            while(true);
-        }
-
-        void consumeDoubleQuotesString() {
-            assert(_lookaheadChar == '"');
-            _token._type = TokenType::DoubleQuotesString;
-            consumeString();
-        }
-
-        void consumeSingleQuotesString() {
-            assert(_lookaheadChar == '\'');
-            _token._type = TokenType::SingleQuotesString;
-            consumeString();
-        }
-
-        void consumeNumber() {
-            assert(isNumber());
-            string number;
-            Char lead = consumeChar();
-            number += lead;
-
-            bool hasFrac = false;
-            bool hasExp = false;
-
-            if (lead == '0' && isNumber()) throw CompilerError(UnexpectedCharacter, _point);
-
-            while(isNumber()) number += consumeChar();
-
-            if (_lookaheadChar == '.') {
-                number += consumeChar();
-                hasFrac = true;
-
-                if (isEoF()) throw CompilerError(UnexpectedEoF, _point);
-                if (!isNumber()) throw CompilerError(ExpectedADigit, _point);
-
-                while(isNumber()) number += consumeChar();
-            }
-
-            if (_lookaheadChar == 'e' || _lookaheadChar == 'E') {
-                number += consumeChar();
-                hasExp = true;
-                if (isEoF()) throw CompilerError(UnexpectedEoF, _point);
-                if (_lookaheadChar == '+' || _lookaheadChar == '-') number += consumeChar();
-                if (!isNumber()) throw CompilerError(ExpectedADigit, _point);
-                while(isNumber()) number += consumeChar();
-            }
-
-            try {
-                if (hasExp || hasFrac) {   
-                    _token._value = stod(number);
-                    _token._type = Float;
-                } else {
-                    _token._value = stoull(number);
-                    _token._type = Integer;
-                }
-            } catch(out_of_range e) {
-                throw CompilerError(NumberOverflow, _point);
-            } catch(invalid_argument e) {
-                assert(false); // Numbers should be parsable by C++ std::stod() or std::stoull()
-            }
-        }
-
-        void consumeOperator() {
-            string op;
-            op += _lookaheadChar;
-            auto found = operatorSymbols.find(op);
-            if (found == operatorSymbols.end()) {
-                assert(false); // Should have checked isOperatorChar() first.
-            }
-            consumeChar();
-            do {
-                op += _lookaheadChar;
-                auto longerOpFound = operatorSymbols.find(op);
-                if (longerOpFound == operatorSymbols.end()) {
-                    _token._type = found->second;
-                    _token._value = 0ULL;
-                    return;
-                }
-                found = longerOpFound;
-                consumeChar();
-            } while(true);
-        }
-
-        void consumeNext() {
-            _token._sourceSpan.start = _point;
-            _token._stringSpan.start = _current;
-
-            if (isEoF()) {
-                _token._type = TokenType::EoF;
-                _token._value = 0ULL;
-            } else if (isWhitespace()) {
-                consumeWhitespace();
-            } else if (isIdentifierLeadChar()) {
-                consumeIdentifier();
-            } else if (isDoubleQuoteChar()) {
-                consumeDoubleQuotesString();
-            } else if (isSingleQuoteChar()) {
-                consumeSingleQuotesString();
-            } else if (isNumber()) {
-                consumeNumber();
-            } else if (isOperatorLeadChar()) {
-                consumeOperator();
-            } else {
-                throw CompilerError(UnexpectedCharacter, _point);
-            }
-
-            _token._sourceSpan.end = _point;
-            _token._stringSpan.end = _current;
-        }
-    };
-
-    TokenIterator begin() {
-        return TokenIterator(_code.begin(), _code.end());
-    }
-    
-    TokenIterator end() {
-        StringIterator end = _code.end();
-        return TokenIterator(end, end);
-    }
-};
-
-ostream& operator << (ostream& out, Lexer::Token& token) {
-    out << name(token.type()) << " (" << token.span() << ") ";
-    switch(token.type()) {
-        case Identifier:
-            out << token.value<string>() << " ";
-            break;
-        case SingleQuotesString:
-            out << '\'' << token.value<string>() << '\'' << " ";
-            break;
-        case DoubleQuotesString:
-            out << '"' << token.value<string>() << '"' << " ";
-            break;
-        case Integer:
-            out << token.value<unsigned long long int>() << " ";
-            break;
-        case Float:
-            out << token.value<double>() << " ";
-            break;
-        default:
-            break;
-    }
-
-    return out;
-}
+using namespace rvm;
 
 /// PARSER ///
 
@@ -1175,11 +529,11 @@ private:
 
     Token consumeToken() {
         Token token = _lookaheadToken;
-        if (!is<EoF>()) {
+        if (!is<TokenType::EoF>()) {
             _lookaheadToken = *++_current;
             // Ignore whitespace.
             // TODO: Capture last comment before members for docs.
-            while(is<Whitespace>()) _lookaheadToken = *++_current;
+            while(is<TokenType::Whitespace>()) _lookaheadToken = *++_current;
         }
         return token;
     }
@@ -1203,50 +557,50 @@ private:
 
         ptr_value lhs = parsePrec1ValueExpression();
         if (lhs->precedence() >= 12) {
-            if (is<Assignment>()) {
+            if (is<TokenType::Assignment>()) {
                 // <Assign> ::= <Prec12Exp> assign <Expression>
-                consume<Assignment>();
-                lhs = make_unique<AssignmentExpression>(move(lhs), parseValueExpression());
-            } else if (is<AdditionAssignment>()) {
+                consume<TokenType::Assignment>();
+                lhs = std::make_unique<AssignmentExpression>(move(lhs), parseValueExpression());
+            } else if (is<TokenType::AdditionAssignment>()) {
                 // <AddAssign> ::= <Prec12Exp> add-assign <Expression>
-                consume<AdditionAssignment>();
-                lhs = make_unique<AdditionAssignmentExpression>(move(lhs), parseValueExpression());
-            } else if (is<SubtractionAssignment>()) {
+                consume<TokenType::AdditionAssignment>();
+                lhs = std::make_unique<AdditionAssignmentExpression>(move(lhs), parseValueExpression());
+            } else if (is<TokenType::SubtractionAssignment>()) {
                 // <SubtractAssign> ::= <Prec12Exp> subtract-assign <Expression>
-                consume<SubtractionAssignment>();
-                lhs = make_unique<SubtractionAssignmentExpression>(move(lhs), parseValueExpression());
-            } else if (is<MultiplicationAssignment>()) {
+                consume<TokenType::SubtractionAssignment>();
+                lhs = std::make_unique<SubtractionAssignmentExpression>(move(lhs), parseValueExpression());
+            } else if (is<TokenType::MultiplicationAssignment>()) {
                 // <MultiplyAssign> ::= <Prec12Exp> multiply-assign <Expression>
-                consume<MultiplicationAssignment>();
-                lhs = make_unique<MultiplicationAssignmentExpression>(move(lhs), parseValueExpression());
-            } else if (is<DivisionAssignment>()) {
+                consume<TokenType::MultiplicationAssignment>();
+                lhs = std::make_unique<MultiplicationAssignmentExpression>(move(lhs), parseValueExpression());
+            } else if (is<TokenType::DivisionAssignment>()) {
                 // <DivideAssign> ::= <Prec12Exp> divide-assign <Expression>
-                consume<DivisionAssignment>();
-                lhs = make_unique<DivisionAssignmentExpression>(move(lhs), parseValueExpression());
-            } else if (is<BitAndAssignment>()) {
+                consume<TokenType::DivisionAssignment>();
+                lhs = std::make_unique<DivisionAssignmentExpression>(move(lhs), parseValueExpression());
+            } else if (is<TokenType::BitAndAssignment>()) {
                 // <BitAndAssign> ::= <Prec12Exp> bit-and-assign <Expression>
-                consume<BitAndAssignment>();
-                lhs = make_unique<BitAndAssignmentExpression>(move(lhs), parseValueExpression());
-            } else if (is<BitXOrAssignment>()) {
+                consume<TokenType::BitAndAssignment>();
+                lhs = std::make_unique<BitAndAssignmentExpression>(move(lhs), parseValueExpression());
+            } else if (is<TokenType::BitXOrAssignment>()) {
                 // <BitXorAssign> ::= <Prec12Exp> bit-xor-assign <Expression>
-                consume<BitXOrAssignment>();
-                lhs = make_unique<BitXOrAssignmentExpression>(move(lhs), parseValueExpression());
-            } else if (is<BitOrAssignment>()) {
+                consume<TokenType::BitXOrAssignment>();
+                lhs = std::make_unique<BitXOrAssignmentExpression>(move(lhs), parseValueExpression());
+            } else if (is<TokenType::BitOrAssignment>()) {
                 // <BitOrAssign> ::= <Prec12Exp> bit-or-assign <Expression>
-                consume<BitOrAssignment>();
-                lhs = make_unique<BitOrAssignmentExpression>(move(lhs), parseValueExpression());
-            } else if (is<ReminderAssignment>()) {
+                consume<TokenType::BitOrAssignment>();
+                lhs = std::make_unique<BitOrAssignmentExpression>(move(lhs), parseValueExpression());
+            } else if (is<TokenType::ReminderAssignment>()) {
                 // <ReminderAssign> ::= <Prec12Exp> reminder-assign <Expression>
-                consume<ReminderAssignment>();
-                lhs = make_unique<ReminderAssignmentExpression>(move(lhs), parseValueExpression());
-            } else if (is<LeftShiftAssignment>()) {
+                consume<TokenType::ReminderAssignment>();
+                lhs = std::make_unique<ReminderAssignmentExpression>(move(lhs), parseValueExpression());
+            } else if (is<TokenType::LeftShiftAssignment>()) {
                 // <ShiftLeftAssign> ::= <Prec12Exp> shift-left-assign <Expression>
-                consume<LeftShiftAssignment>();
-                lhs = make_unique<LeftShiftAssignmentExpression>(move(lhs), parseValueExpression());
-            } else if (is<RightShiftAssignment>()) {
+                consume<TokenType::LeftShiftAssignment>();
+                lhs = std::make_unique<LeftShiftAssignmentExpression>(move(lhs), parseValueExpression());
+            } else if (is<TokenType::RightShiftAssignment>()) {
                 // <ShiftRightAssign> ::= <Prec12Exp> shift-right-assign <Expression>
-                consume<RightShiftAssignment>();
-                lhs = make_unique<RightShiftAssignmentExpression>(move(lhs), parseValueExpression());
+                consume<TokenType::RightShiftAssignment>();
+                lhs = std::make_unique<RightShiftAssignmentExpression>(move(lhs), parseValueExpression());
             }
         }
         return lhs;
@@ -1257,13 +611,13 @@ private:
         // <Prec1Exp> ::= <ConditionalIf> | <Prec2Exp>
         // <ConditionalIf> ::= <Prec2Exp> question <Expression> colon <Expression>
         ptr_value conditionExpression = parsePrec2ValueExpression();
-        if (!is<Question>()) return conditionExpression;
+        if (!is<TokenType::Question>()) return conditionExpression;
 
-        consume<Question>();
+        consume<TokenType::Question>();
         ptr_value thenExpression = parseValueExpression();
-        consume<Colon>();
+        consume<TokenType::Colon>();
         ptr_value elseExpression = parseValueExpression();
-        return make_unique<ConditionalIfExpression>(move(conditionExpression), move(thenExpression), move(elseExpression));
+        return std::make_unique<ConditionalIfExpression>(move(conditionExpression), move(thenExpression), move(elseExpression));
     }
 
     ptr_value parsePrec2ValueExpression() {
@@ -1271,10 +625,10 @@ private:
         // <Prec2Exp> ::= <Prec3Exp> | <ConditionalOr>
         // <ConditionalOr> ::= <Prec2Exp> conditional-or <Prec3Exp>       
         ptr_value lhs = parsePrec3ValueExpression();
-        while(is<ConditionalOr>()) {
-            consume<ConditionalOr>();
+        while(is<TokenType::ConditionalOr>()) {
+            consume<TokenType::ConditionalOr>();
             ptr_value rhs = parsePrec3ValueExpression();
-            lhs = make_unique<ConditionalOrExpression>(move(lhs), move(rhs));
+            lhs = std::make_unique<ConditionalOrExpression>(move(lhs), move(rhs));
         }
         return lhs;
     }
@@ -1284,10 +638,10 @@ private:
         // <Prec3Exp> ::= <Prec4Exp> | <ConditionalAnd>
         // <ConditionalAnd> ::=  <Prec3Exp> conditional-and <Prec4Exp>
         ptr_value lhs = parsePrec4ValueExpression();
-        while(is<ConditionalAnd>()) {
-            consume<ConditionalAnd>();
+        while(is<TokenType::ConditionalAnd>()) {
+            consume<TokenType::ConditionalAnd>();
             ptr_value rhs = parsePrec4ValueExpression();
-            lhs = make_unique<ConditionalAndExpression>(move(lhs), move(rhs));
+            lhs = std::make_unique<ConditionalAndExpression>(move(lhs), move(rhs));
         }
         return lhs;
     }
@@ -1297,10 +651,10 @@ private:
         // <Prec4Exp> ::= <Prec5Exp> | <BitwiseOr>
         // <BitwiseOr> ::= <Prec4Exp> bitwise-or <Prec5Exp>
         ptr_value lhs = parsePrec5ValueExpression();
-        while(is<BitwiseOr>()) {
-            consume<BitwiseOr>();
+        while(is<TokenType::BitwiseOr>()) {
+            consume<TokenType::BitwiseOr>();
             ptr_value rhs = parsePrec5ValueExpression();
-            lhs = make_unique<BitwiseOrExpression>(move(lhs), move(rhs));
+            lhs = std::make_unique<BitwiseOrExpression>(move(lhs), move(rhs));
         }
         return lhs;
     }
@@ -1309,10 +663,10 @@ private:
         // <Prec5Exp> ::= <Prec6Exp> | <BitwiseXOr>
         // <BitwiseXOr> ::= <Prec5Exp> bitwise-xor <Prec6Exp>
         ptr_value lhs = parsePrec6ValueExpression();
-        while(is<BitwiseXOr>()) {
-            consume<BitwiseXOr>();
+        while(is<TokenType::BitwiseXOr>()) {
+            consume<TokenType::BitwiseXOr>();
             ptr_value rhs = parsePrec6ValueExpression();
-            lhs = make_unique<BitwiseXOrExpression>(move(lhs), move(rhs));
+            lhs = std::make_unique<BitwiseXOrExpression>(move(lhs), move(rhs));
         }
         return lhs;
     }
@@ -1321,10 +675,10 @@ private:
         // <Prec6Exp> ::= <Prec7Exp> | <BitwiseAnd>
         // <BitwiseAnd> ::= <Prec6Exp> bitwise-and <Prec7Exp>
         ptr_value lhs = parsePrec7ValueExpression();
-        while(is<BitwiseAnd>()) {
-            consume<BitwiseAnd>();
+        while(is<TokenType::BitwiseAnd>()) {
+            consume<TokenType::BitwiseAnd>();
             ptr_value rhs = parsePrec7ValueExpression();
-            lhs = make_unique<BitwiseAndExpression>(move(lhs), move(rhs));
+            lhs = std::make_unique<BitwiseAndExpression>(move(lhs), move(rhs));
         }
         return lhs;
     }
@@ -1334,16 +688,16 @@ private:
         // <Prec7Exp> ::= <Prec8Exp> | <Equal> | <NotEqual>
         ptr_value lhs = parsePrec8ValueExpression();
         do {
-            if (is<Equal>()) {
+            if (is<TokenType::Equal>()) {
                 // <Equal> ::= <Prec7Exp> equal <Prec8Exp>
-                consume<Equal>();
+                consume<TokenType::Equal>();
                 ptr_value rhs = parsePrec8ValueExpression();
-                lhs = make_unique<EqualExpression>(move(lhs), move(rhs));
-            } else if (is<NotEqual>()) {
+                lhs = std::make_unique<EqualExpression>(move(lhs), move(rhs));
+            } else if (is<TokenType::NotEqual>()) {
                 // <NotEqual> ::= <Prec7Exp> not-equal <Prec8Exp>
-                consume<NotEqual>();
+                consume<TokenType::NotEqual>();
                 ptr_value rhs = parsePrec8ValueExpression();
-                lhs = make_unique<NotEqualExpression>(move(lhs), move(rhs));
+                lhs = std::make_unique<NotEqualExpression>(move(lhs), move(rhs));
             } else break;
         } while(true);
         return lhs;
@@ -1354,26 +708,26 @@ private:
         // <Prec8Exp> ::= <Prec9Exp> | <LessThan> | <GreaterThan> | <LessOrEqual> | <GreaterOrEqual>
         ptr_value lhs = parsePrec9ValueExpression();
         do {
-            if (is<Less>()) {
+            if (is<TokenType::Less>()) {
                 // <LessThan> ::= <Prec8Exp> less-than <Prec9Exp>
-                consume<Less>();
+                consume<TokenType::Less>();
                 ptr_value rhs = parsePrec9ValueExpression();
-                lhs = make_unique<LessThanExpression>(move(lhs), move(rhs));
-            } else if (is<Greater>()) {
+                lhs = std::make_unique<LessThanExpression>(move(lhs), move(rhs));
+            } else if (is<TokenType::Greater>()) {
                 // <GreaterThan> ::= <Prec8Exp> greater-than <Prec9Exp>
-                consume<Greater>();
+                consume<TokenType::Greater>();
                 ptr_value rhs = parsePrec9ValueExpression();
-                lhs = make_unique<GreaterThanExpression>(move(lhs), move(rhs));
-            } else if (is<LessOrEqual>()) {
+                lhs = std::make_unique<GreaterThanExpression>(move(lhs), move(rhs));
+            } else if (is<TokenType::LessOrEqual>()) {
                 // <LessOrEqual> ::= <Prec8Exp> less-or-equal <Prec9Exp>
-                consume<LessOrEqual>();
+                consume<TokenType::LessOrEqual>();
                 ptr_value rhs = parsePrec9ValueExpression();
-                lhs = make_unique<LessOrEqualExpression>(move(lhs), move(rhs));
-            } else if (is<GreaterOrEqual>()) {
+                lhs = std::make_unique<LessOrEqualExpression>(move(lhs), move(rhs));
+            } else if (is<TokenType::GreaterOrEqual>()) {
                 // <GreaterOrEqual> ::= <Prec8Exp> greater-or-equal <Prec9Exp>
-                consume<GreaterOrEqual>();
+                consume<TokenType::GreaterOrEqual>();
                 ptr_value rhs = parsePrec9ValueExpression();
-                lhs = make_unique<GreaterOrEqualExpression>(move(lhs), move(rhs));
+                lhs = std::make_unique<GreaterOrEqualExpression>(move(lhs), move(rhs));
             } else break;
         } while(true);
         return lhs;
@@ -1385,16 +739,16 @@ private:
         ptr_value lhs = parsePrec10ValueExpression();
 
         do {
-            if (is<LeftShift>()) {
+            if (is<TokenType::LeftShift>()) {
                 // <LeftShift> ::= <Prec9Exp> shift-left <Prec10Exp>
-                consume<LeftShift>();
+                consume<TokenType::LeftShift>();
                 ptr_value rhs = parsePrec10ValueExpression();
-                lhs = make_unique<LeftShiftExpression>(move(lhs), move(rhs));
-            } else if (is<RightShift>()) {
+                lhs = std::make_unique<LeftShiftExpression>(move(lhs), move(rhs));
+            } else if (is<TokenType::RightShift>()) {
                 // <RightShift> ::= <Prec9Exp> shift-right <Prec10Exp>
-                consume<RightShift>();
+                consume<TokenType::RightShift>();
                 ptr_value rhs = parsePrec10ValueExpression();
-                lhs = make_unique<RightShiftExpression>(move(lhs), move(rhs));
+                lhs = std::make_unique<RightShiftExpression>(move(lhs), move(rhs));
             } else break;
         } while(true);
         return lhs;
@@ -1407,16 +761,16 @@ private:
         // <Prec11Exp>
         ptr_value prec10Exp = parsePrec11ValueExpression();
         do {
-            if (is<Plus>()) {
+            if (is<TokenType::Plus>()) {
                 // <Add> ::= <Prec10Exp> plus <Prec11Exp>
-                consume<Plus>();
+                consume<TokenType::Plus>();
                 ptr_value rhs = parsePrec11ValueExpression();
-                prec10Exp = make_unique<AddExpression>(move(prec10Exp), move(rhs));
-            } else if (is<Minus>()) {
+                prec10Exp = std::make_unique<AddExpression>(move(prec10Exp), move(rhs));
+            } else if (is<TokenType::Minus>()) {
                 // <Subtract> ::= <Prec10Exp> minus <Prec11Exp>
-                consume<Minus>();
+                consume<TokenType::Minus>();
                 ptr_value rhs = parsePrec11ValueExpression();
-                prec10Exp = make_unique<SubtractExpression>(move(prec10Exp), move(rhs));
+                prec10Exp = std::make_unique<SubtractExpression>(move(prec10Exp), move(rhs));
             } else break;
         } while(true);
         return prec10Exp;
@@ -1429,21 +783,21 @@ private:
         // <Prec12Exp>
         ptr_value prec11Exp = parsePrec12ValueExpression();
         do {
-            if (is<Multiply>()) {
+            if (is<TokenType::Multiply>()) {
                 // <Multiply> ::= <Prec11Exp> multiply <Prec12Exp>
-                consume<Multiply>();
+                consume<TokenType::Multiply>();
                 ptr_value rhs = parsePrec12ValueExpression();
-                prec11Exp = make_unique<MultiplyExpression>(move(prec11Exp), move(rhs));
-            } else if (is<Divide>()) {
+                prec11Exp = std::make_unique<MultiplyExpression>(move(prec11Exp), move(rhs));
+            } else if (is<TokenType::Divide>()) {
                 // <Divide> ::= <Prec11Exp> divide <Prec12Exp>
-                consume<Divide>();
+                consume<TokenType::Divide>();
                 ptr_value rhs = parsePrec12ValueExpression();
-                prec11Exp = make_unique<DivideExpression>(move(prec11Exp), move(rhs));
-            } else if (is<Reminder>()) {
+                prec11Exp = std::make_unique<DivideExpression>(move(prec11Exp), move(rhs));
+            } else if (is<TokenType::Reminder>()) {
                 // <Reminder> ::= <Prec11Exp> reminder <Prec12Exp>
-                consume<Reminder>();
+                consume<TokenType::Reminder>();
                 ptr_value rhs = parsePrec12ValueExpression();
-                prec11Exp = make_unique<ReminderExpression>(move(prec11Exp), move(rhs));
+                prec11Exp = std::make_unique<ReminderExpression>(move(prec11Exp), move(rhs));
             } else break;
         } while(true);
         return prec11Exp;
@@ -1460,13 +814,25 @@ private:
         //             | <BitComplement>
         //             | <Prec13Exp>
 
-        if (is<ConditionalNot>()) return make_unique<ConditionalNotExpression>(parsePrec12ValueExpression());
-        else if (is<Plus>()) return make_unique<UnaryPlusExpression>(parsePrec12ValueExpression());
-        else if (is<Minus>()) return make_unique<UnaryMinusExpression>(parsePrec12ValueExpression());
-        else if (is<Increment>()) return make_unique<PreIncrementExpression>(parsePrec12ValueExpression());
-        else if (is<Decrement>()) return make_unique<PreDecrementExpression>(parsePrec12ValueExpression());
-        else if (is<BitComplement>()) return make_unique<BitComplementExpression>(parsePrec12ValueExpression());
-        else return parsePrec13ValueExpression();
+        if (is<TokenType::ConditionalNot>()) {
+            consume<TokenType::ConditionalNot>();
+            return std::make_unique<ConditionalNotExpression>(parsePrec12ValueExpression());
+        } else if (is<TokenType::Plus>()) {
+            consume<TokenType::Plus>();
+            return std::make_unique<UnaryPlusExpression>(parsePrec12ValueExpression());
+        } else if (is<TokenType::Minus>()) {
+            consume<TokenType::Minus>();
+            return std::make_unique<UnaryMinusExpression>(parsePrec12ValueExpression());
+        } else if (is<TokenType::Increment>()) {
+            consume<TokenType::Increment>();
+            return std::make_unique<PreIncrementExpression>(parsePrec12ValueExpression());
+        } else if (is<TokenType::Decrement>()) {
+            consume<TokenType::Decrement>();
+            return std::make_unique<PreDecrementExpression>(parsePrec12ValueExpression());
+        } else if (is<TokenType::BitComplement>()) {
+            consume<TokenType::BitComplement>();
+            return std::make_unique<BitComplementExpression>(parsePrec12ValueExpression());
+        } else return parsePrec13ValueExpression();
     }
 
     ptr_value parsePrec13ValueExpression() {
@@ -1474,109 +840,109 @@ private:
         // Precedence 13 operators: Unary Post-Operators and Base Expressions
         // <Prec13Exp> ::=
         // <Identifier>
-        if (is<Identifier>()) prec13Exp = make_unique<IdentifierExpression>(consume<Identifier>());
+        if (is<TokenType::Identifier>()) prec13Exp = std::make_unique<IdentifierExpression>(consume<TokenType::Identifier>());
         // <ConstantValue>
-        else if (is<TokenType::Float>()) prec13Exp = make_unique<ConstantValueExpression>(consume<TokenType::Float>());
-        else if (is<TokenType::Integer>()) prec13Exp = make_unique<ConstantValueExpression>(consume<TokenType::Integer>());
-        else if (is<SingleQuotesString>()) prec13Exp = make_unique<ConstantValueExpression>(consume<SingleQuotesString>());
-        else if (is<DoubleQuotesString>()) prec13Exp = make_unique<ConstantValueExpression>(consume<DoubleQuotesString>());
+        else if (is<TokenType::Float>()) prec13Exp = std::make_unique<ConstantValueExpression>(consume<TokenType::Float>());
+        else if (is<TokenType::Integer>()) prec13Exp = std::make_unique<ConstantValueExpression>(consume<TokenType::Integer>());
+        else if (is<TokenType::SingleQuotesString>()) prec13Exp = std::make_unique<ConstantValueExpression>(consume<TokenType::SingleQuotesString>());
+        else if (is<TokenType::DoubleQuotesString>()) prec13Exp = std::make_unique<ConstantValueExpression>(consume<TokenType::DoubleQuotesString>());
         // <ParenExpression>
-        else if (is<OpenParenthesis>()) {
-            consume<OpenParenthesis>();
+        else if (is<TokenType::OpenParenthesis>()) {
+            consume<TokenType::OpenParenthesis>();
             prec13Exp = parseValueExpression();
-            consume<CloseParenthesis>();
+            consume<TokenType::CloseParenthesis>();
         }
         else throw CompilerError(UnexpectedParserEoF, span());
 
         do {
             // <MemberAccess> ::= <Prec13Exp> dot <Member>
-            if (is<Dot>()) {
-                consume<Dot>();
+            if (is<TokenType::Dot>()) {
+                consume<TokenType::Dot>();
                 // <Member> ::= Identifier
-                auto name = consume<Identifier>();
-                prec13Exp = make_unique<MemberAccessExpression>(move(prec13Exp), name);
-            } else if (is<OpenParenthesis>()) {
+                auto name = consume<TokenType::Identifier>();
+                prec13Exp = std::make_unique<MemberAccessExpression>(move(prec13Exp), name);
+            } else if (is<TokenType::OpenParenthesis>()) {
                 // <Invocation> ::= <Prec13Exp> l-paren <Values> r-paren
-                consume<OpenParenthesis>();
+                consume<TokenType::OpenParenthesis>();
                 // <Values> ::= <Expression> comma <Values> | <Expression> | <>
                 vector<ptr_value> values;
-                if (!is<CloseParenthesis>()) {
+                if (!is<TokenType::CloseParenthesis>()) {
                     do {
                         values.push_back(parseValueExpression());
-                        if (is<Comma>()) consume<Comma>();
+                        if (is<TokenType::Comma>()) consume<TokenType::Comma>();
                         else break;
                     } while(true);
                 }
-                consume<CloseParenthesis>();
-                prec13Exp = make_unique<InvocationExpression>(move(prec13Exp), move(values));
-            } else if (is<Increment>()) {
+                consume<TokenType::CloseParenthesis>();
+                prec13Exp = std::make_unique<InvocationExpression>(move(prec13Exp), move(values));
+            } else if (is<TokenType::Increment>()) {
                 // <PostIncrement> ::= <Prec13Exp> increment
-                consume<Increment>();
-                prec13Exp = make_unique<PostIncrementExpression>(move(prec13Exp));
-            } else if (is<Decrement>()) {
+                consume<TokenType::Increment>();
+                prec13Exp = std::make_unique<PostIncrementExpression>(move(prec13Exp));
+            } else if (is<TokenType::Decrement>()) {
                 // <PostDecrement> ::= <Prec13Exp> decrement
-                consume<Decrement>();
-                prec13Exp = make_unique<PostDecrementExpression>(move(prec13Exp));
+                consume<TokenType::Decrement>();
+                prec13Exp = std::make_unique<PostDecrementExpression>(move(prec13Exp));
             } else break;
         } while(true);
         return prec13Exp;
     }
 
     unique_ptr<ConstStatement> parseConstStatement() {
-        consume<ConstKeyword>();
-        auto name = consume<Identifier>();
+        consume<TokenType::ConstKeyword>();
+        auto name = consume<TokenType::Identifier>();
 
         ptr_type type = nullptr;
-        if (is<Colon>()) {
-            consume<Colon>();
+        if (is<TokenType::Colon>()) {
+            consume<TokenType::Colon>();
             type = parseTypeExpression();
         }
 
-        consume<Assignment>();
+        consume<TokenType::Assignment>();
         auto value = parseValueExpression();
-        consume<Semicolon>();
-        return make_unique<ConstStatement>(name, move(type), move(value));
+        consume<TokenType::Semicolon>();
+        return std::make_unique<ConstStatement>(name, move(type), move(value));
     }
 
     unique_ptr<ReturnStatement> parseReturnStatement() {
-        consume<ReturnKeyword>();
+        consume<TokenType::ReturnKeyword>();
         ptr_value value = nullptr;
-        if (!is<Semicolon>()) value = parseValueExpression();
-        consume<Semicolon>();
-        return make_unique<ReturnStatement>(move(value));
+        if (!is<TokenType::Semicolon>()) value = parseValueExpression();
+        consume<TokenType::Semicolon>();
+        return std::make_unique<ReturnStatement>(move(value));
     }
 
     ptr_statement parseStatement() {
-        if (is<ConstKeyword>()) return parseConstStatement();
-        if (is<ReturnKeyword>()) return parseReturnStatement();
+        if (is<TokenType::ConstKeyword>()) return parseConstStatement();
+        if (is<TokenType::ReturnKeyword>()) return parseReturnStatement();
 
         // TODO: for, if, etc.
 
         ptr_statement expression = parseValueExpression();
-        consume<Semicolon>();
+        consume<TokenType::Semicolon>();
         return expression;
     }
 
     unique_ptr<CodeBlock> parseCodeBlock() {
-        consume<LeftBrace>();
+        consume<TokenType::LeftBrace>();
         vector<ptr_statement> _statements;
-        while(!is<RightBrace>()) {
-            if (is<EoF>()) throw CompilerError(UnexpectedParserEoF, span());
+        while(!is<TokenType::RightBrace>()) {
+            if (is<TokenType::EoF>()) throw CompilerError(UnexpectedParserEoF, span());
             _statements.push_back(parseStatement());
         }
-        consume<RightBrace>();
-        return make_unique<CodeBlock>(move(_statements));
+        consume<TokenType::RightBrace>();
+        return std::make_unique<CodeBlock>(move(_statements));
     }
 
     ptr_type parseTypeExpression() {
-        if (is<IntKeyword>()) {
-            return make_unique<PrimitiveTypeExpression>(consume<IntKeyword>(), PrimitiveType::Int);
-        } else if (is<FloatKeyword>()) {
-            return make_unique<PrimitiveTypeExpression>(consume<FloatKeyword>(), PrimitiveType::Float);
-        } else if (is<StringKeyword>()) {
-            return make_unique<PrimitiveTypeExpression>(consume<StringKeyword>(), PrimitiveType::String);
-        } else if (is<BoolKeyword>()) {
-            return make_unique<PrimitiveTypeExpression>(consume<BoolKeyword>(), PrimitiveType::Bool);
+        if (is<TokenType::IntKeyword>()) {
+            return std::make_unique<PrimitiveTypeExpression>(consume<TokenType::IntKeyword>(), PrimitiveType::Int);
+        } else if (is<TokenType::FloatKeyword>()) {
+            return std::make_unique<PrimitiveTypeExpression>(consume<TokenType::FloatKeyword>(), PrimitiveType::Float);
+        } else if (is<TokenType::StringKeyword>()) {
+            return std::make_unique<PrimitiveTypeExpression>(consume<TokenType::StringKeyword>(), PrimitiveType::String);
+        } else if (is<TokenType::BoolKeyword>()) {
+            return std::make_unique<PrimitiveTypeExpression>(consume<TokenType::BoolKeyword>(), PrimitiveType::Bool);
         }
 
         // TODO: Identifier, fully qualified names, generics, etc.
@@ -1585,64 +951,64 @@ private:
 
     unique_ptr<FunctionArgument> consumeFunctionArgument() {
         Token identifier;
-        if (is<Identifier>()) {
-            identifier = consume<Identifier>();
+        if (is<TokenType::Identifier>()) {
+            identifier = consume<TokenType::Identifier>();
         }
-        consume<Colon>();
+        consume<TokenType::Colon>();
         ptr_type type = parseTypeExpression();
 
-        return make_unique<FunctionArgument>(identifier, move(type));
+        return std::make_unique<FunctionArgument>(identifier, move(type));
     }
 
     unique_ptr<FunctionPrototype> consumeFunctionPrototype() {
         vector<unique_ptr<FunctionArgument> > args;
 
-        consume<OpenParenthesis>();
-        if (!is<CloseParenthesis>()) {
+        consume<TokenType::OpenParenthesis>();
+        if (!is<TokenType::CloseParenthesis>()) {
             args.push_back(consumeFunctionArgument());
-            while(is<Comma>()) {
-                consume<Comma>();
+            while(is<TokenType::Comma>()) {
+                consume<TokenType::Comma>();
                 args.push_back(consumeFunctionArgument());
             }
         }
-        consume<CloseParenthesis>();
+        consume<TokenType::CloseParenthesis>();
 
         ptr_type returnTypeAnnotation = nullptr;
-        if (is<Colon>()) {
-            consume<Colon>();
+        if (is<TokenType::Colon>()) {
+            consume<TokenType::Colon>();
             returnTypeAnnotation = parseTypeExpression();
         }
 
-        return make_unique<FunctionPrototype>(move(args), move(returnTypeAnnotation));
+        return std::make_unique<FunctionPrototype>(move(args), move(returnTypeAnnotation));
     }
 
     unique_ptr<Function> consumeFunction() {
-        auto functionKeywordToken = consume<FunctionKeyword>();
-        auto identifier = consume<Identifier>();
+        auto functionKeywordToken = consume<TokenType::FunctionKeyword>();
+        auto identifier = consume<TokenType::Identifier>();
         auto proto = consumeFunctionPrototype();
         auto block = parseCodeBlock();
 
         // TODO: Add args, add return type, add code block.
-        return make_unique<Function>(identifier, move(proto), move(block));
+        return std::make_unique<Function>(identifier, move(proto), move(block));
     }
 
     unique_ptr<FunctionDeclaration> consumeFunctionDeclaration(Token& declareKeyword) {
-        auto functionKeywordToken = consume<FunctionKeyword>();
-        auto identifier = consume<Identifier>();
+        auto functionKeywordToken = consume<TokenType::FunctionKeyword>();
+        auto identifier = consume<TokenType::Identifier>();
         auto proto = consumeFunctionPrototype();
-        auto semicolon = consume<Semicolon>();
+        auto semicolon = consume<TokenType::Semicolon>();
 
-        return make_unique<FunctionDeclaration>(identifier, move(proto));
+        return std::make_unique<FunctionDeclaration>(identifier, move(proto));
     }
 
     void parseModuleMembers() {
-        while(!is<EoF>()) {
-            while(is<Whitespace>()) consume<Whitespace>();
-            if (is<FunctionKeyword>()) {
+        while(!is<TokenType::EoF>()) {
+            while(is<TokenType::Whitespace>()) consume<TokenType::Whitespace>();
+            if (is<TokenType::FunctionKeyword>()) {
                 _members.push_back(consumeFunction());
-            } else if (is<DeclareKeyword>()) {
-                Token declareKeyword = consume<DeclareKeyword>();
-                if (is<FunctionKeyword>()) {
+            } else if (is<TokenType::DeclareKeyword>()) {
+                Token declareKeyword = consume<TokenType::DeclareKeyword>();
+                if (is<TokenType::FunctionKeyword>()) {
                     _members.push_back(consumeFunctionDeclaration(declareKeyword));
                 } else {
                     throw CompilerError(UnexpectedToken, span());
@@ -1715,7 +1081,7 @@ void printTokens(string program) {
     Lexer lexer(program);
     try {
         for (auto token : lexer) {
-            if (token.type() != Whitespace) {
+            if (token.type() != TokenType::Whitespace) {
                 cout << token << endl;
             }
         }

@@ -45,6 +45,8 @@
         "__memory": "cpp",
         "system_error": "cpp",
         "__locale": "cpp",
-        "future": "cpp"
+        "future": "cpp",
+        "cstddef": "cpp",
+        "list": "cpp"
     }
 }
