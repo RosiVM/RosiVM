@@ -54,6 +54,11 @@ namespace rvm {
         UnexpectedParserEoF = 2001,
         UnexpectedToken = 2002,
         ExpectedIdentifier = 2003,
+
+        // Type errors
+        UnexpectedType = 3001,
+        UnaryExpressionTypeError = 3002,
+        BinaryExpressionTypeError = 3003
     };
 
     class CompilerError : public std::exception {

@@ -40,48 +40,70 @@ ptr_value rvm::Parser::parseValueExpression() {
     if (lhs->precedence() >= 12) {
         if (is<TokenType::Assignment>()) {
             // <Assign> ::= <Prec12Exp> assign <Expression>
-            consume<TokenType::Assignment>();
-            lhs = std::make_unique<AssignmentExpression>(move(lhs), parseValueExpression());
+            lhs = std::make_unique<AssignmentExpression>(
+                move(lhs),
+                consume<TokenType::Assignment>(),
+                parseValueExpression());
         } else if (is<TokenType::AdditionAssignment>()) {
             // <AddAssign> ::= <Prec12Exp> add-assign <Expression>
-            consume<TokenType::AdditionAssignment>();
-            lhs = std::make_unique<AdditionAssignmentExpression>(move(lhs), parseValueExpression());
+            lhs = std::make_unique<AdditionAssignmentExpression>(
+                move(lhs),
+                consume<TokenType::AdditionAssignment>(),
+                parseValueExpression());
         } else if (is<TokenType::SubtractionAssignment>()) {
             // <SubtractAssign> ::= <Prec12Exp> subtract-assign <Expression>
-            consume<TokenType::SubtractionAssignment>();
-            lhs = std::make_unique<SubtractionAssignmentExpression>(move(lhs), parseValueExpression());
+            lhs = std::make_unique<SubtractionAssignmentExpression>(
+                move(lhs),
+                consume<TokenType::SubtractionAssignment>(),
+                parseValueExpression());
         } else if (is<TokenType::MultiplicationAssignment>()) {
             // <MultiplyAssign> ::= <Prec12Exp> multiply-assign <Expression>
-            consume<TokenType::MultiplicationAssignment>();
-            lhs = std::make_unique<MultiplicationAssignmentExpression>(move(lhs), parseValueExpression());
+            lhs = std::make_unique<MultiplicationAssignmentExpression>(
+                move(lhs),
+                consume<TokenType::MultiplicationAssignment>(),
+                parseValueExpression());
         } else if (is<TokenType::DivisionAssignment>()) {
             // <DivideAssign> ::= <Prec12Exp> divide-assign <Expression>
-            consume<TokenType::DivisionAssignment>();
-            lhs = std::make_unique<DivisionAssignmentExpression>(move(lhs), parseValueExpression());
+            lhs = std::make_unique<DivisionAssignmentExpression>(
+                move(lhs),
+                consume<TokenType::DivisionAssignment>(),
+                parseValueExpression());
         } else if (is<TokenType::BitAndAssignment>()) {
             // <BitAndAssign> ::= <Prec12Exp> bit-and-assign <Expression>
-            consume<TokenType::BitAndAssignment>();
-            lhs = std::make_unique<BitAndAssignmentExpression>(move(lhs), parseValueExpression());
+            lhs = std::make_unique<BitAndAssignmentExpression>(
+                move(lhs),
+                consume<TokenType::BitAndAssignment>(),
+                parseValueExpression());
         } else if (is<TokenType::BitXOrAssignment>()) {
             // <BitXorAssign> ::= <Prec12Exp> bit-xor-assign <Expression>
-            consume<TokenType::BitXOrAssignment>();
-            lhs = std::make_unique<BitXOrAssignmentExpression>(move(lhs), parseValueExpression());
+            lhs = std::make_unique<BitXOrAssignmentExpression>(
+                move(lhs),
+                consume<TokenType::BitXOrAssignment>(),
+                parseValueExpression());
         } else if (is<TokenType::BitOrAssignment>()) {
             // <BitOrAssign> ::= <Prec12Exp> bit-or-assign <Expression>
-            consume<TokenType::BitOrAssignment>();
-            lhs = std::make_unique<BitOrAssignmentExpression>(move(lhs), parseValueExpression());
+            lhs = std::make_unique<BitOrAssignmentExpression>(
+                move(lhs),
+                consume<TokenType::BitOrAssignment>(),
+                parseValueExpression());
         } else if (is<TokenType::ReminderAssignment>()) {
             // <ReminderAssign> ::= <Prec12Exp> reminder-assign <Expression>
-            consume<TokenType::ReminderAssignment>();
-            lhs = std::make_unique<ReminderAssignmentExpression>(move(lhs), parseValueExpression());
+            lhs = std::make_unique<ReminderAssignmentExpression>(
+                move(lhs),
+                consume<TokenType::ReminderAssignment>(),
+                parseValueExpression());
         } else if (is<TokenType::LeftShiftAssignment>()) {
             // <ShiftLeftAssign> ::= <Prec12Exp> shift-left-assign <Expression>
-            consume<TokenType::LeftShiftAssignment>();
-            lhs = std::make_unique<LeftShiftAssignmentExpression>(move(lhs), parseValueExpression());
+            lhs = std::make_unique<LeftShiftAssignmentExpression>(
+                move(lhs),
+                consume<TokenType::LeftShiftAssignment>(),
+                parseValueExpression());
         } else if (is<TokenType::RightShiftAssignment>()) {
             // <ShiftRightAssign> ::= <Prec12Exp> shift-right-assign <Expression>
-            consume<TokenType::RightShiftAssignment>();
-            lhs = std::make_unique<RightShiftAssignmentExpression>(move(lhs), parseValueExpression());
+            lhs = std::make_unique<RightShiftAssignmentExpression>(
+                move(lhs),
+                consume<TokenType::RightShiftAssignment>(),
+                parseValueExpression());
         }
     }
     return lhs;
@@ -107,9 +129,10 @@ ptr_value rvm::Parser::parsePrec2ValueExpression() {
     // <ConditionalOr> ::= <Prec2Exp> conditional-or <Prec3Exp>       
     ptr_value lhs = parsePrec3ValueExpression();
     while(is<TokenType::ConditionalOr>()) {
-        consume<TokenType::ConditionalOr>();
-        ptr_value rhs = parsePrec3ValueExpression();
-        lhs = std::make_unique<ConditionalOrExpression>(move(lhs), move(rhs));
+        lhs = std::make_unique<ConditionalOrExpression>(
+            move(lhs),
+            consume<TokenType::ConditionalOr>(),
+            parsePrec3ValueExpression());
     }
     return lhs;
 }
@@ -120,9 +143,10 @@ ptr_value rvm::Parser::parsePrec3ValueExpression() {
     // <ConditionalAnd> ::=  <Prec3Exp> conditional-and <Prec4Exp>
     ptr_value lhs = parsePrec4ValueExpression();
     while(is<TokenType::ConditionalAnd>()) {
-        consume<TokenType::ConditionalAnd>();
-        ptr_value rhs = parsePrec4ValueExpression();
-        lhs = std::make_unique<ConditionalAndExpression>(move(lhs), move(rhs));
+        lhs = std::make_unique<ConditionalAndExpression>(
+            move(lhs),
+            consume<TokenType::ConditionalAnd>(),
+            parsePrec4ValueExpression());
     }
     return lhs;
 }
@@ -133,9 +157,10 @@ ptr_value rvm::Parser::parsePrec4ValueExpression() {
     // <BitwiseOr> ::= <Prec4Exp> bitwise-or <Prec5Exp>
     ptr_value lhs = parsePrec5ValueExpression();
     while(is<TokenType::BitwiseOr>()) {
-        consume<TokenType::BitwiseOr>();
-        ptr_value rhs = parsePrec5ValueExpression();
-        lhs = std::make_unique<BitwiseOrExpression>(move(lhs), move(rhs));
+        lhs = std::make_unique<BitwiseOrExpression>(
+            move(lhs),
+            consume<TokenType::BitwiseOr>(),
+            parsePrec5ValueExpression());
     }
     return lhs;
 }
@@ -145,9 +170,10 @@ ptr_value rvm::Parser::parsePrec5ValueExpression() {
     // <BitwiseXOr> ::= <Prec5Exp> bitwise-xor <Prec6Exp>
     ptr_value lhs = parsePrec6ValueExpression();
     while(is<TokenType::BitwiseXOr>()) {
-        consume<TokenType::BitwiseXOr>();
-        ptr_value rhs = parsePrec6ValueExpression();
-        lhs = std::make_unique<BitwiseXOrExpression>(move(lhs), move(rhs));
+        lhs = std::make_unique<BitwiseXOrExpression>(
+            move(lhs),
+            consume<TokenType::BitwiseXOr>(),
+            parsePrec6ValueExpression());
     }
     return lhs;
 }
@@ -157,9 +183,10 @@ ptr_value rvm::Parser::parsePrec6ValueExpression() {
     // <BitwiseAnd> ::= <Prec6Exp> bitwise-and <Prec7Exp>
     ptr_value lhs = parsePrec7ValueExpression();
     while(is<TokenType::BitwiseAnd>()) {
-        consume<TokenType::BitwiseAnd>();
-        ptr_value rhs = parsePrec7ValueExpression();
-        lhs = std::make_unique<BitwiseAndExpression>(move(lhs), move(rhs));
+        lhs = std::make_unique<BitwiseAndExpression>(
+            move(lhs),
+            consume<TokenType::BitwiseAnd>(),
+            parsePrec7ValueExpression());
     }
     return lhs;
 }
@@ -171,14 +198,16 @@ ptr_value rvm::Parser::parsePrec7ValueExpression() {
     do {
         if (is<TokenType::Equal>()) {
             // <Equal> ::= <Prec7Exp> equal <Prec8Exp>
-            consume<TokenType::Equal>();
-            ptr_value rhs = parsePrec8ValueExpression();
-            lhs = std::make_unique<EqualExpression>(move(lhs), move(rhs));
+            lhs = std::make_unique<EqualExpression>(
+                move(lhs),
+                consume<TokenType::Equal>(),
+                parsePrec8ValueExpression());
         } else if (is<TokenType::NotEqual>()) {
             // <NotEqual> ::= <Prec7Exp> not-equal <Prec8Exp>
-            consume<TokenType::NotEqual>();
-            ptr_value rhs = parsePrec8ValueExpression();
-            lhs = std::make_unique<NotEqualExpression>(move(lhs), move(rhs));
+            lhs = std::make_unique<NotEqualExpression>(
+                move(lhs),
+                consume<TokenType::NotEqual>(),
+                parsePrec8ValueExpression());
         } else break;
     } while(true);
     return lhs;
@@ -191,24 +220,28 @@ ptr_value rvm::Parser::parsePrec8ValueExpression() {
     do {
         if (is<TokenType::Less>()) {
             // <LessThan> ::= <Prec8Exp> less-than <Prec9Exp>
-            consume<TokenType::Less>();
-            ptr_value rhs = parsePrec9ValueExpression();
-            lhs = std::make_unique<LessThanExpression>(move(lhs), move(rhs));
+            lhs = std::make_unique<LessThanExpression>(
+                move(lhs),
+                consume<TokenType::Less>(),
+                parsePrec9ValueExpression());
         } else if (is<TokenType::Greater>()) {
             // <GreaterThan> ::= <Prec8Exp> greater-than <Prec9Exp>
-            consume<TokenType::Greater>();
-            ptr_value rhs = parsePrec9ValueExpression();
-            lhs = std::make_unique<GreaterThanExpression>(move(lhs), move(rhs));
+            lhs = std::make_unique<GreaterThanExpression>(
+                move(lhs),
+                consume<TokenType::Greater>(),
+                parsePrec9ValueExpression());
         } else if (is<TokenType::LessOrEqual>()) {
             // <LessOrEqual> ::= <Prec8Exp> less-or-equal <Prec9Exp>
-            consume<TokenType::LessOrEqual>();
-            ptr_value rhs = parsePrec9ValueExpression();
-            lhs = std::make_unique<LessOrEqualExpression>(move(lhs), move(rhs));
+            lhs = std::make_unique<LessOrEqualExpression>(
+                move(lhs),
+                consume<TokenType::LessOrEqual>(),
+                parsePrec9ValueExpression());
         } else if (is<TokenType::GreaterOrEqual>()) {
             // <GreaterOrEqual> ::= <Prec8Exp> greater-or-equal <Prec9Exp>
-            consume<TokenType::GreaterOrEqual>();
-            ptr_value rhs = parsePrec9ValueExpression();
-            lhs = std::make_unique<GreaterOrEqualExpression>(move(lhs), move(rhs));
+            lhs = std::make_unique<GreaterOrEqualExpression>(
+                move(lhs),
+                consume<TokenType::GreaterOrEqual>(),
+                parsePrec9ValueExpression());
         } else break;
     } while(true);
     return lhs;
@@ -222,14 +255,16 @@ ptr_value rvm::Parser::parsePrec9ValueExpression() {
     do {
         if (is<TokenType::LeftShift>()) {
             // <LeftShift> ::= <Prec9Exp> shift-left <Prec10Exp>
-            consume<TokenType::LeftShift>();
-            ptr_value rhs = parsePrec10ValueExpression();
-            lhs = std::make_unique<LeftShiftExpression>(move(lhs), move(rhs));
+            lhs = std::make_unique<LeftShiftExpression>(
+                move(lhs),
+                consume<TokenType::LeftShift>(),
+                parsePrec10ValueExpression());
         } else if (is<TokenType::RightShift>()) {
             // <RightShift> ::= <Prec9Exp> shift-right <Prec10Exp>
-            consume<TokenType::RightShift>();
-            ptr_value rhs = parsePrec10ValueExpression();
-            lhs = std::make_unique<RightShiftExpression>(move(lhs), move(rhs));
+            lhs = std::make_unique<RightShiftExpression>(
+                move(lhs),
+                consume<TokenType::RightShift>(),
+                parsePrec10ValueExpression());
         } else break;
     } while(true);
     return lhs;
@@ -244,14 +279,16 @@ ptr_value rvm::Parser::parsePrec10ValueExpression() {
     do {
         if (is<TokenType::Plus>()) {
             // <Add> ::= <Prec10Exp> plus <Prec11Exp>
-            consume<TokenType::Plus>();
-            ptr_value rhs = parsePrec11ValueExpression();
-            prec10Exp = std::make_unique<AddExpression>(move(prec10Exp), move(rhs));
+            prec10Exp = std::make_unique<AddExpression>(
+                move(prec10Exp),
+                consume<TokenType::Plus>(),
+                parsePrec11ValueExpression());
         } else if (is<TokenType::Minus>()) {
             // <Subtract> ::= <Prec10Exp> minus <Prec11Exp>
-            consume<TokenType::Minus>();
-            ptr_value rhs = parsePrec11ValueExpression();
-            prec10Exp = std::make_unique<SubtractExpression>(move(prec10Exp), move(rhs));
+            prec10Exp = std::make_unique<SubtractExpression>(
+                move(prec10Exp),
+                consume<TokenType::Minus>(),
+                parsePrec11ValueExpression());
         } else break;
     } while(true);
     return prec10Exp;
@@ -266,19 +303,22 @@ ptr_value rvm::Parser::parsePrec11ValueExpression() {
     do {
         if (is<TokenType::Multiply>()) {
             // <Multiply> ::= <Prec11Exp> multiply <Prec12Exp>
-            consume<TokenType::Multiply>();
-            ptr_value rhs = parsePrec12ValueExpression();
-            prec11Exp = std::make_unique<MultiplyExpression>(move(prec11Exp), move(rhs));
+            prec11Exp = std::make_unique<MultiplyExpression>(
+                move(prec11Exp),
+                consume<TokenType::Multiply>(),
+                parsePrec12ValueExpression());
         } else if (is<TokenType::Divide>()) {
             // <Divide> ::= <Prec11Exp> divide <Prec12Exp>
-            consume<TokenType::Divide>();
-            ptr_value rhs = parsePrec12ValueExpression();
-            prec11Exp = std::make_unique<DivideExpression>(move(prec11Exp), move(rhs));
+            prec11Exp = std::make_unique<DivideExpression>(
+                move(prec11Exp),
+                consume<TokenType::Divide>(),
+                parsePrec12ValueExpression());
         } else if (is<TokenType::Reminder>()) {
             // <Reminder> ::= <Prec11Exp> reminder <Prec12Exp>
-            consume<TokenType::Reminder>();
-            ptr_value rhs = parsePrec12ValueExpression();
-            prec11Exp = std::make_unique<ReminderExpression>(move(prec11Exp), move(rhs));
+            prec11Exp = std::make_unique<ReminderExpression>(
+                move(prec11Exp),
+                consume<TokenType::Reminder>(),
+                parsePrec12ValueExpression());
         } else break;
     } while(true);
     return prec11Exp;
@@ -296,23 +336,29 @@ ptr_value rvm::Parser::parsePrec12ValueExpression() {
     //             | <Prec13Exp>
 
     if (is<TokenType::ConditionalNot>()) {
-        consume<TokenType::ConditionalNot>();
-        return std::make_unique<ConditionalNotExpression>(parsePrec12ValueExpression());
+        return std::make_unique<ConditionalNotExpression>(
+            consume<TokenType::ConditionalNot>(),
+            parsePrec12ValueExpression());
     } else if (is<TokenType::Plus>()) {
-        consume<TokenType::Plus>();
-        return std::make_unique<UnaryPlusExpression>(parsePrec12ValueExpression());
+        return std::make_unique<UnaryPlusExpression>(
+            consume<TokenType::Plus>(),
+            parsePrec12ValueExpression());
     } else if (is<TokenType::Minus>()) {
-        consume<TokenType::Minus>();
-        return std::make_unique<UnaryMinusExpression>(parsePrec12ValueExpression());
+        return std::make_unique<UnaryMinusExpression>(
+            consume<TokenType::Minus>(),
+            parsePrec12ValueExpression());
     } else if (is<TokenType::Increment>()) {
-        consume<TokenType::Increment>();
-        return std::make_unique<PreIncrementExpression>(parsePrec12ValueExpression());
+        return std::make_unique<PreIncrementExpression>(
+            consume<TokenType::Increment>(),
+            parsePrec12ValueExpression());
     } else if (is<TokenType::Decrement>()) {
-        consume<TokenType::Decrement>();
-        return std::make_unique<PreDecrementExpression>(parsePrec12ValueExpression());
+        return std::make_unique<PreDecrementExpression>(
+            consume<TokenType::Decrement>(),
+            parsePrec12ValueExpression());
     } else if (is<TokenType::BitComplement>()) {
-        consume<TokenType::BitComplement>();
-        return std::make_unique<BitComplementExpression>(parsePrec12ValueExpression());
+        return std::make_unique<BitComplementExpression>(
+            consume<TokenType::BitComplement>(),
+            parsePrec12ValueExpression());
     } else return parsePrec13ValueExpression();
 }
 
@@ -358,12 +404,14 @@ ptr_value rvm::Parser::parsePrec13ValueExpression() {
             prec13Exp = std::make_unique<InvocationExpression>(move(prec13Exp), move(values));
         } else if (is<TokenType::Increment>()) {
             // <PostIncrement> ::= <Prec13Exp> increment
-            consume<TokenType::Increment>();
-            prec13Exp = std::make_unique<PostIncrementExpression>(move(prec13Exp));
+            prec13Exp = std::make_unique<PostIncrementExpression>(
+                move(prec13Exp),
+                consume<TokenType::Increment>());
         } else if (is<TokenType::Decrement>()) {
             // <PostDecrement> ::= <Prec13Exp> decrement
-            consume<TokenType::Decrement>();
-            prec13Exp = std::make_unique<PostDecrementExpression>(move(prec13Exp));
+            prec13Exp = std::make_unique<PostDecrementExpression>(
+                move(prec13Exp),
+                consume<TokenType::Decrement>());
         } else break;
     } while(true);
     return prec13Exp;
@@ -397,7 +445,7 @@ ptr_statement rvm::Parser::parseStatement() {
     if (is<TokenType::ConstKeyword>()) return parseConstStatement();
     if (is<TokenType::ReturnKeyword>()) return parseReturnStatement();
 
-    // TODO: for, if, etc.
+    // TODO: if, do, while, for, throw, catch etc.
 
     ptr_statement expression = parseValueExpression();
     consume<TokenType::Semicolon>();
@@ -469,7 +517,6 @@ unique_ptr<Function> rvm::Parser::consumeFunction() {
     auto proto = consumeFunctionPrototype();
     auto block = parseCodeBlock();
 
-    // TODO: Add args, add return type, add code block.
     return std::make_unique<Function>(identifier, move(proto), move(block));
 }
 

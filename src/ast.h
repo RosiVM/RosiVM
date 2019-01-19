@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include "lexer.h"
+#include "types.h"
 
 namespace rvm {
     namespace ast {
@@ -253,31 +254,45 @@ namespace rvm {
         };
 
         class ValueExpression : public Statement {
+            rvm::type::Type* _type;
         public:
+            ValueExpression() : _type(nullptr) {}
             virtual ushort precedence() = 0;
+
+            rvm::type::Type* type() { return _type; }
+            void setType(rvm::type::Type* type) { _type = type; }
         };
 
         class UnaryExpression : public ValueExpression {
             ptr_value _operand;
+            Token _token;
         public:
-            UnaryExpression(ptr_value operand) : _operand(move(operand)) {}
+            UnaryExpression(ptr_value operand, Token token) : _token(token), _operand(move(operand)) {}
+            UnaryExpression(Token token, ptr_value operand) : _operand(move(operand)), _token(token) {}
             virtual UnaryOperator op() = 0;
             ptr_value& operand() { return _operand; }
+            SourceSpan span() { return _token.span(); }
         };
 
         class BinaryExpression : public ValueExpression {
             ptr_value _lhs, _rhs;
+            Token _token;
         public:
-            BinaryExpression(ptr_value lhs, ptr_value rhs) : _lhs(move(lhs)), _rhs(move(rhs)) {}
+            BinaryExpression(ptr_value lhs, Token token, ptr_value rhs) :
+                _lhs(move(lhs)),
+                _token(token),
+                _rhs(move(rhs)) {}
             virtual BinaryOperator op() = 0;
             ptr_value& lhs() { return _lhs; }
             ptr_value& rhs() { return _rhs; }
+            SourceSpan span() { return _token.span(); }
         };
 
         #define UNARY_EXPRESSION_CLASS(CLASS, OPERATOR, PRECEDENCE)\
         class CLASS : public UnaryExpression {\
         public:\
-            CLASS(ptr_value operand) : UnaryExpression(move(operand)) {}\
+            CLASS(ptr_value operand, Token token) : UnaryExpression(move(operand), token) {}\
+            CLASS(Token token, ptr_value operand) : UnaryExpression(token, move(operand)) {}\
             ushort precedence() override { return PRECEDENCE; }\
             UnaryOperator op() override { return OPERATOR; }\
             void visit(StatementVisitor* visitor) override { visitor->on(this); }\
@@ -286,7 +301,7 @@ namespace rvm {
         #define BINARY_EXPRESSION_CLASS(CLASS, OPERATOR, PRECEDENCE)\
         class CLASS : public BinaryExpression {\
         public:\
-            CLASS(ptr_value lhs, ptr_value rhs) : BinaryExpression(move(lhs), move(rhs)) {}\
+            CLASS(ptr_value lhs, Token token, ptr_value rhs) : BinaryExpression(move(lhs), token, move(rhs)) {}\
             ushort precedence() override { return PRECEDENCE; }\
             BinaryOperator op() override { return OPERATOR; }\
             void visit(StatementVisitor* visitor) override { visitor->on(this); }\

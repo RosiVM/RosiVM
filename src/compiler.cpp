@@ -1,11 +1,13 @@
 #include <vector>
 #include <map>
 #include <cassert>
+#include <stack>
 
 #include "source.h"
 #include "lexer.h"
 #include "parser.h"
 #include "print.h"
+#include "types.h"
 
 using namespace std;
 using namespace rvm;
@@ -97,6 +99,104 @@ public:
     }
 };
 
+class TypeChecker :
+    public rvm::ast::ModuleMemberVisitor,
+    public rvm::ast::TypeExpressionVisitor,
+    public rvm::ast::StatementVisitor {
+public:
+    void on(rvm::ast::Function* f) override {
+        // TODO: Read the args, the return type, assign a type to the function declaration...
+        // f->args()
+        // f->returnType();
+
+        // TODO: Store the return type on stack to typecheck return expressions inside...
+        // TODO: Push the args in name scope...
+        f->codeBlock()->visit(this);
+    }
+    void on(rvm::ast::FunctionDeclaration* f) override {
+        // TODO: Read the args, the return type, assign a type to the function declaration...
+    }
+    void on(rvm::ast::PrimitiveTypeExpression* t) override {
+        // TODO:
+        assert(false);
+    }
+    void on(rvm::ast::CodeBlock* statement) override {
+        for(auto& statement : statement->statements())
+            statement->visit(this);
+    }
+    void on(rvm::ast::ConstStatement* statement) override {
+        // TODO: There should be a difference between type annotation and type resolved by the checker...
+        ptr_type& typeExpression = statement->type();
+        if (typeExpression != nullptr)
+            typeExpression->visit(this);
+
+        // Assignment for the const expressions is mandatory.
+        statement->value()->visit(this);
+
+        // TODO: Read the type annotation if any
+        // TODO: Read the assignment expression and make sure it is assignable to the annotation, or infer type from it.
+        // TODO: Push a const in the code block
+    }
+    void on(rvm::ast::ReturnStatement* statement) override {
+        // TODO:
+        assert(false);
+    }
+    void on(rvm::ast::IdentifierExpression* expression) override {
+        // TODO: Find what this is referring? var, const in name scope, global function?
+        assert(false);
+    }
+    void on(rvm::ast::ConstantValueExpression* expression) override {
+        auto token = expression->literal();
+        switch(token.type()) {
+            case TokenType::Float: expression->setType(rvm::type::getFloat()); break;
+            case TokenType::Integer: expression->setType(rvm::type::getInt()); break;
+            case TokenType::SingleQuotesString: expression->setType(rvm::type::getString()); break;
+            case TokenType::DoubleQuotesString: expression->setType(rvm::type::getString()); break;
+            default: assert(false); break;
+        }
+    }
+    void on(rvm::ast::MemberAccessExpression* expression) override {
+        // TODO:
+        assert(false);
+    }
+    void on(rvm::ast::InvocationExpression* expression) override {
+        expression->operand()->visit(this);
+        auto functionType = expression->operand()->type();
+        // TODO: Assert functionType is callable, if it is not - generate error...
+        for(auto& arg : expression->values())
+            arg->visit(this);
+        // TODO: Check if the arg types will resolve to an override...
+
+        // TODO: Store the expression type to be the return type of the overload
+        
+        assert(false);
+    }
+    void on(rvm::ast::ConditionalIfExpression* expression) override {
+        // TODO:
+        assert(false);
+    }
+    void on(rvm::ast::UnaryExpression* expression) override {
+        // TODO:
+        assert(false);
+    }
+    void on(rvm::ast::BinaryExpression* expression) override {
+        // TODO:
+        switch(expression->op()) {
+            case rvm::ast::BinaryOperator::AddOperator: {
+                // TODO: Maybe this should be for all + - * / operators, but what about = += -= etc?
+                expression->lhs()->visit(this);
+                expression->rhs()->visit(this);
+                auto lType = expression->lhs()->type();
+                auto rType = expression->rhs()->type();
+
+                // float + float = float
+                throw CompilerError(ErrorCode::BinaryExpressionTypeError, expression->span());
+            }
+            default: throw CompilerError(ErrorCode::BinaryExpressionTypeError, expression->span());
+        }
+    }
+};
+
 void testSimpleProgramAST1() {
     string program = ""
         "declare function sin(angle: float): float;\r\n"s
@@ -118,6 +218,11 @@ void testSimpleProgramAST1() {
     parser.visit(&printer);
 
     // TODO: Typechecking!
+    // Binder symbols;
+    // parser.visit(&symbols);
+
+    TypeChecker typeChecker;
+    parser.visit(&typeChecker);
 
     TheModule = llvm::make_unique<Module>("my cool jit", TheContext);
     LLIRCompiler llirCompiler;
