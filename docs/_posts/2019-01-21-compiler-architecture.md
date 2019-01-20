@@ -4,16 +4,16 @@ title: Compiler Architecture
 permalink: /compiler-architecture/
 ---
 
-The compiler front-end has manually writter, C++, recursive ascent parser. Early versions of the language were expressed in BNF using the [GOLD Parsing System](http://www.goldparser.org/engine/) to ensure no ambiguity. The system uses llvm as backend.
+The compiler has manually written, C++, recursive ascent parser for front-end. And uses [LLVM](https://llvm.org) as compiler back-end.
 
 Overview of the flow:
 ```
 Lexer -> Parser -> Binder -> TypeChecker -> LLVMEmitter
 ```
 
-The goal for the lexer, parser, binder and LLVMEmitter is to provide linear O(n) parsing. The TypeChecker comlpexity will depend on the language features, but it will still be written with performance in mind.
+Early versions of the language had their grammar defined in BNF and tested for ambiguity using compiler generators. The goal for the lexer, parser, binder and LLVMEmitter is to provide linear O(n) parsing. The TypeChecker comlpexity will depend on the language features. But overall the design is done with compilation performance in mind.
 
-RosiVM tries to get close to C++ runtime performance, but to maintain good compilation times and developer productivity.
+RosiVM tries to get close to C++ runtime performance, but to maintain good compilation times and developer productivity. C-like structures and functions should come with zero costs abstractions, but C++ like classes will generate rtti and TBD - sort of GC or smart pointers.
 
 ## Lexer
 The lexer processes the souce file as string, character by character, splitting it into tokens. During the tokenization phase the lexer also performs character escaping and number parsing for string and numeric literals.
