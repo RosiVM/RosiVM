@@ -4,7 +4,6 @@ title: Compiler Architecture
 permalink: /compiler-architecture/
 ---
 
-# Compiler Architecture
 The compiler front-end has manually writter, C++, recursive ascent parser. Early versions of the language were expressed in BNF using the [GOLD Parsing System](http://www.goldparser.org/engine/) to ensure no ambiguity. The system uses llvm as backend.
 
 Overview of the flow:
