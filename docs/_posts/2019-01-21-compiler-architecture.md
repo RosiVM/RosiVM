@@ -6,7 +6,6 @@ permalink: /compiler-architecture/
 
 The compiler has manually written, C++, recursive ascent parser for front-end. And uses [LLVM](https://llvm.org) as compiler back-end.
 
-Overview of the flow:
 ```
 Lexer -> Parser -> Binder -> TypeChecker -> LLVMEmitter
 ```
