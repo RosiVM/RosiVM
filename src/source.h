@@ -55,10 +55,14 @@ namespace rvm {
         UnexpectedToken = 2002,
         ExpectedIdentifier = 2003,
 
+        // Symbol errors
+        UnknownSymbolReference = 3001,
+
         // Type errors
-        UnexpectedType = 3001,
-        UnaryExpressionTypeError = 3002,
-        BinaryExpressionTypeError = 3003
+        UnexpectedType = 4001,
+        UnaryExpressionTypeError = 4002,
+        BinaryExpressionTypeError = 4003,
+        NotCallable = 4004,
     };
 
     class CompilerError : public std::exception {

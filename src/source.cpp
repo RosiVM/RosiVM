@@ -10,6 +10,8 @@ std::map<rvm::ErrorCode, std::string> errorCodeDescription {
     { ExpectedADigit, "Lexed error, expected a digit from 0 to 9."s },
     { NumberOverflow, "Lexed error, number too large."s },
 
+    { UnknownSymbolReference, "Binder error, unknown symbol reference."},
+
     // Parser errors
     { UnexpectedEoF, "Parser error, unexpected end of file."s },
     { UnexpectedToken, "Parser error, unexpected token."s },

@@ -5,6 +5,9 @@ namespace rvm {
     namespace type {
 
         class Type {
+        public:
+            virtual bool isInvocable() { return false; }
+            // virtual rvm::ast::ModuleMember* lookupOverload(std::vector<ptr_value>& args) { return nullptr; }
         };
 
         class PrimitiveType : public Type {

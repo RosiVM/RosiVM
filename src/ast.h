@@ -391,6 +391,7 @@ namespace rvm {
             std::string name() { return _identifier.value<std::string>(); }
             ushort precedence() override { return 13; }
             void visit(StatementVisitor* visitor) override { visitor->on(this); }
+            SourceSpan span() { return _identifier.span(); } 
         };
         class ConstantValueExpression : public ValueExpression {
             Token _literal;
