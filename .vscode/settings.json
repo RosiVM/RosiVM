@@ -47,6 +47,25 @@
         "__locale": "cpp",
         "future": "cpp",
         "cstddef": "cpp",
-        "list": "cpp"
+        "list": "cpp",
+        "__debug": "cpp",
+        "__mutex_base": "cpp",
+        "__threading_support": "cpp",
+        "cctype": "cpp",
+        "cinttypes": "cpp",
+        "clocale": "cpp",
+        "cmath": "cpp",
+        "cstdarg": "cpp",
+        "cstdint": "cpp",
+        "cstdio": "cpp",
+        "cstdlib": "cpp",
+        "cstring": "cpp",
+        "ctime": "cpp",
+        "cwchar": "cpp",
+        "cwctype": "cpp",
+        "mutex": "cpp",
+        "stack": "cpp",
+        "streambuf": "cpp",
+        "string_view": "cpp"
     }
 }

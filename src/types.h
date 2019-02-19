@@ -7,7 +7,6 @@ namespace rvm {
         class Type {
         public:
             virtual bool isInvocable() { return false; }
-            // virtual rvm::ast::ModuleMember* lookupOverload(std::vector<ptr_value>& args) { return nullptr; }
         };
 
         class PrimitiveType : public Type {
@@ -23,6 +22,14 @@ namespace rvm {
         public:
             PrimitiveType(Type type) : _type(type) {}
             Type type() { return _type; }
+        };
+
+        class FunctionSignature : public Type {
+            Type* _returnType;
+        public:
+            // TODO: Either use some sort of shared pointers, or normalize types on the go and make the TypeChecker keep their lifetime...
+            FunctionSignature(Type* returnType) : _returnType(returnType) {}
+            Type* returnType() { return _returnType; }
         };
 
         PrimitiveType* getInt();

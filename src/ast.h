@@ -10,6 +10,8 @@ namespace rvm {
     namespace ast {
         typedef typename rvm::Lexer::Token Token;
 
+        class Expression;
+
         class ModuleMember;
 
         class Function;
@@ -55,6 +57,7 @@ namespace rvm {
         extern const std::string UnaryOperatorString[8];
 
         class UnaryExpression;
+
         enum BinaryOperator {
             AssignmentOperator,
             AdditionAssignmentOperator,
@@ -96,6 +99,7 @@ namespace rvm {
             DivideOperator,
             ReminderOperator,
         };
+
         extern const std::string BinaryOperatorString[29];
 
         inline const std::string toString(UnaryOperator op) { return UnaryOperatorString[op]; }
@@ -134,7 +138,15 @@ namespace rvm {
             virtual ~ModuleMember() {}
         };
 
-        class FunctionPrototype {
+        class Typed {
+            rvm::type::Type* _type;
+        public:
+            Typed() : _type(nullptr) {}
+            rvm::type::Type* type() { return _type; }
+            void setType(rvm::type::Type* type) { _type = type; }
+        };
+
+        class FunctionPrototype : public Typed {
             std::vector<std::unique_ptr<FunctionArgument> > _args;
             ptr_type _returnType;
         public:
@@ -181,18 +193,18 @@ namespace rvm {
             void visit(ModuleMemberVisitor* visitor) override { visitor->on(this); }
         };
 
-        class FunctionArgument {
+        class FunctionArgument : public Typed {
             Token _identifier;
             ptr_type _type;
         public:
             FunctionArgument(Token identifier, ptr_type type) : _identifier(identifier), _type(move(type)) {}
-
             std::string name() { return _identifier.value<std::string>(); }
             ptr_type& type() { return _type; }
         };
 
-        class TypeExpression {
+        class TypeExpression : public Typed {
         public:
+            TypeExpression() {}
             virtual void visit(TypeExpressionVisitor* visitor) = 0;
             virtual ~TypeExpression() {}
         };
@@ -253,14 +265,10 @@ namespace rvm {
             void visit(StatementVisitor* visitor) override { visitor->on(this); }
         };
 
-        class ValueExpression : public Statement {
-            rvm::type::Type* _type;
+        class ValueExpression : public Statement, public Typed {
         public:
-            ValueExpression() : _type(nullptr) {}
+            ValueExpression() {}
             virtual ushort precedence() = 0;
-
-            rvm::type::Type* type() { return _type; }
-            void setType(rvm::type::Type* type) { _type = type; }
         };
 
         class UnaryExpression : public ValueExpression {

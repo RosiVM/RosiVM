@@ -11,6 +11,7 @@ namespace rvm {
     class Binder : public NameScope, public rvm::ast::ModuleMemberVisitor {
     public:
         Binder() {}
+
         void on(rvm::ast::Function* f) override { addSymbolDeclaration(f->name(), f); }
         void on(rvm::ast::FunctionDeclaration* f) override { addSymbolDeclaration(f->name(), f); }
     };
