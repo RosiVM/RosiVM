@@ -1,12 +1,18 @@
 #ifndef RVM_TYPES_H
 #define RVM_TYPES_H
 
+#include <vector>
+
 namespace rvm {
     namespace type {
+        
+        class FunctionSignature;
 
         class Type {
+            std::vector<FunctionSignature*> _functionSignatureTypes;
         public:
-            virtual bool isInvocable() { return false; }
+            Type() : _functionSignatureTypes() {}
+            virtual std::vector<FunctionSignature*>& functionSignatureTypes() { return _functionSignatureTypes; }
         };
 
         class PrimitiveType : public Type {
@@ -24,12 +30,13 @@ namespace rvm {
             Type type() { return _type; }
         };
 
-        class FunctionSignature : public Type {
+        class SignatureType : public Type {
             Type* _returnType;
+            std::vector<Type*> _argumentTypes;
         public:
-            // TODO: Either use some sort of shared pointers, or normalize types on the go and make the TypeChecker keep their lifetime...
-            FunctionSignature(Type* returnType) : _returnType(returnType) {}
+            SignatureType(Type* returnType, std::vector<Type*> argumentTypes) : _returnType(returnType), _argumentTypes(std::move(argumentTypes)) {}
             Type* returnType() { return _returnType; }
+            std::vector<Type*> argumentTypes() { return _argumentTypes; }
         };
 
         PrimitiveType* getInt();

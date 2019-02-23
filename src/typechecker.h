@@ -1,6 +1,8 @@
 #ifndef RVM_TYPECHECKER_H
 #define RVM_TYPECHECKER_H
 
+#include <vector>
+
 #include "parser.h"
 #include "ast.h"
 #include "types.h"
@@ -16,29 +18,38 @@ namespace rvm {
         Binder* _binder;
         NameScope* _currentScope;
 
+        std::vector<std::unique_ptr<rvm::type::Type>> _types;
+
     public:
         TypeChecker(Binder* binder) : _binder(binder), _currentScope(binder) {}
 
-        /// Type checks all members of the module.
+        /// Fully type check all members of the module.
         void check(rvm::Parser* module) {
             module->visit(this);
         }
 
         void on(rvm::ast::FunctionArgument* arg) {
-            // Get the type of the type expression and move on the argument, this can not be infered.
-            arg->type()->visit(this);
-            arg->setType(arg->type()->type());
+            // Get the type of the type expression and move on the argument.
+            // Normally vars and consts will either force type from type annotation or infer the type from assignment.
+            // For function arguments the type can not be infered.
+            arg->typeAnnotation()->visit(this);
+            arg->setType(arg->typeAnnotation()->type());
         }
 
         void on(rvm::ast::FunctionPrototype* proto) {
-            for(auto& arg : proto->args()) on(arg.get());
-            proto->returnType()->visit(this);
+            std::vector<rvm::type::Type*> argumentTypes;
+            for(auto& arg : proto->args()) {
+                on(arg.get());
+                argumentTypes.push_back(arg->type());
+            }
 
-            
+            proto->returnTypeAnnotation()->visit(this);
+            rvm::type::Type* returnType = proto->returnTypeAnnotation()->type();
 
-            // TODO: Create a type, how to handle lifetime?
-            // proto->setType();
-            // TODO: proto->setType() ... new FunctionPrototypeType...
+            // TODO: Normalize and unique types.
+            auto type = std::make_unique<rvm::type::SignatureType>(returnType, std::move(argumentTypes));
+            proto->setType(type.get());
+            _types.push_back(std::move(type));
         }
 
         void on(rvm::ast::Function* f) override {
@@ -77,7 +88,7 @@ namespace rvm {
         }
         void on(rvm::ast::ConstStatement* statement) override {
             // TODO: There should be a difference between type annotation and type resolved by the checker...
-            rvm::ast::ptr_type& typeExpression = statement->type();
+            auto& typeExpression = statement->typeAnnotation();
             if (typeExpression != nullptr)
                 typeExpression->visit(this);
 
@@ -113,25 +124,26 @@ namespace rvm {
         }
         void on(rvm::ast::InvocationExpression* expression) override {
             expression->operand()->visit(this);
-
             auto functionType = expression->operand()->type();
 
-            // TODO: functionType here could be a Symbol of function and function declarations
-            // typecheck the ptoto of these functions recursively but don't overdo it by looking in the implementations...
-
-            if (!functionType->isInvocable())
+            // TODO: This should force the Symbol to typecheck its functions and function declarations.
+            // TODO: This should probably include "declaration + function signature", otherwise the emitter won't know the function name and how to name mangle for the linker. Calling convention?
+            auto& callTypes = functionType->functionSignatureTypes();
+            if (callTypes.size() == 0)
                 assert(false); // TODO: CompilerError!
 
-            for(auto& arg : expression->values())
-                arg->visit(this);
-            
-            // auto declaration = functionType->lookupOverload(expression->values());
-            // if (declaration == nullptr)
-            //     assert(false); // TODO: CompilerError!
+            // TODO: Make union types for the argument values to provide as context when resolving values.
+            std::vector<rvm::type::Type*> values;
+            for (auto& value : expression->values()) {
+                value->visit(this);
+                values.push_back(value->type());
+            }
 
-            // TODO: Check if the arg types will resolve to an overload...
-            // TODO: Store the expression type to be the return type of the overload
-            
+            // Now having the values and their types, resolve an overload... or throw.
+            for (auto& callType : callTypes) {
+            }
+
+            // TODO: expression->setType(overload->returnType());
             assert(false);
         }
         void on(rvm::ast::ConditionalIfExpression* expression) override {

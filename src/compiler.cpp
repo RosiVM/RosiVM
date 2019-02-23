@@ -72,13 +72,13 @@ public:
         cout << "compile " << f->name() << endl;
 
         // Make the function type:  double(double,double) etc.
-        std::vector<Type*> Doubles(f->args().size(), Type::getFloatTy(TheContext));
+        std::vector<Type*> Doubles(f->proto()->args().size(), Type::getFloatTy(TheContext));
         FunctionType *FT = FunctionType::get(Type::getFloatTy(TheContext), Doubles, false);
         llvm::Function *F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, f->name(), TheModule.get());
 
         unsigned i = 0;
         for (auto &Arg : F->args()) {
-            auto name = f->args()[i++]->name();
+            auto name = f->proto()->args()[i++]->name();
             Arg.setName(name);
         }
     }
@@ -87,13 +87,13 @@ public:
         cout << "compile " << f->name() << endl;
 
         // Make the function type:  double(double,double) etc.
-        std::vector<Type*> Doubles(f->args().size(), Type::getFloatTy(TheContext));
+        std::vector<Type*> Doubles(f->proto()->args().size(), Type::getFloatTy(TheContext));
         FunctionType *FT = FunctionType::get(Type::getFloatTy(TheContext), Doubles, false);
         llvm::Function *F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, f->name(), TheModule.get());
 
         unsigned i = 0;
         for (auto &Arg : F->args()) {
-            auto name = f->args()[i++]->name();
+            auto name = f->proto()->args()[i++]->name();
             Arg.setName(name);
         }
     }

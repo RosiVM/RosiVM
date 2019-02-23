@@ -69,7 +69,7 @@ namespace rvm {
         std::unique_ptr<ast::ReturnStatement> parseReturnStatement();
         ast::ptr_statement parseStatement();
         std::unique_ptr<ast::CodeBlock> parseCodeBlock();
-        ast::ptr_type parseTypeExpression();
+        ast::ptr_typeExp parseTypeExpression();
         std::unique_ptr<ast::FunctionArgument> consumeFunctionArgument();
         std::unique_ptr<ast::FunctionPrototype> consumeFunctionPrototype();
         std::unique_ptr<ast::Function> consumeFunction();

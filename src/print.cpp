@@ -8,17 +8,17 @@ using namespace rvm::ast;
 void ASTPrinter::on(Function* f) {
     cout << "function " << f->name() << "(";
     bool firstArg = true;
-    for (auto& arg : f->args()) {
+    for (auto& arg : f->proto()->args()) {
         if (!firstArg) cout << ", ";
         cout << arg->name() << ": ";
-        arg->type()->visit(this);
+        arg->typeAnnotation()->visit(this);
         firstArg = false;
     }
     cout << ")";
 
-    if (f->returnType()) {
+    if (f->proto()->returnTypeAnnotation()) {
         cout << ": ";
-        f->returnType()->visit(this);
+        f->proto()->returnTypeAnnotation()->visit(this);
     }
 
     f->codeBlock()->visit(this);
@@ -27,16 +27,16 @@ void ASTPrinter::on(Function* f) {
 void ASTPrinter::on(FunctionDeclaration* f) {
     cout << "declare function " << f->name() << "(";
     bool firstArg = true;
-    for (auto& arg : f->args()) {
+    for (auto& arg : f->proto()->args()) {
         if (!firstArg) cout << ", ";
         cout << arg->name() << ": ";
-        arg->type()->visit(this);
+        arg->typeAnnotation()->visit(this);
         firstArg = false;
     }
     cout << ")";
-    if (f->returnType()) {
+    if (f->proto()->returnTypeAnnotation()) {
         cout << ": ";
-        f->returnType()->visit(this);
+        f->proto()->returnTypeAnnotation()->visit(this);
     }
     cout << ";" << endl;
 }
@@ -69,7 +69,7 @@ void ASTPrinter::on(CodeBlock* statement) {
 
 void ASTPrinter::on(ConstStatement* statement) {
     cout << "const " << statement->name();
-    ptr_type& type = statement->type();
+    ptr_typeExp& type = statement->typeAnnotation();
     if (type != nullptr) {
         cout << ": ";
         type->visit(this);

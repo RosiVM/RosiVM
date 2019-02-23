@@ -38,7 +38,7 @@ namespace rvm {
         class PrimitiveTypeExpression;
 
         typedef std::unique_ptr<Statement> ptr_statement;
-        typedef std::unique_ptr<TypeExpression> ptr_type;
+        typedef std::unique_ptr<TypeExpression> ptr_typeExp;
         typedef std::unique_ptr<ValueExpression> ptr_value;
 
         enum UnaryOperator {
@@ -148,14 +148,14 @@ namespace rvm {
 
         class FunctionPrototype : public Typed {
             std::vector<std::unique_ptr<FunctionArgument> > _args;
-            ptr_type _returnType;
+            ptr_typeExp _returnTypeAnnotation;
         public:
-            FunctionPrototype(std::vector<std::unique_ptr<FunctionArgument> > args, ptr_type returnType) :
+            FunctionPrototype(std::vector<std::unique_ptr<FunctionArgument> > args, ptr_typeExp returnTypeAnnotation) :
                 _args(std::move(args)),
-                _returnType(std::move(returnType)) {}
+                _returnTypeAnnotation(std::move(returnTypeAnnotation)) {}
             
             std::vector<std::unique_ptr<FunctionArgument> >& args() { return _args; }
-            ptr_type& returnType() { return _returnType; }
+            ptr_typeExp& returnTypeAnnotation() { return _returnTypeAnnotation; }
         };
 
         class Function : public ModuleMember {
@@ -169,8 +169,6 @@ namespace rvm {
                 _block(move(block)) {}
 
             std::string name() { return _identifier.value<std::string>(); }
-            std::vector<std::unique_ptr<FunctionArgument> >& args() { return _proto->args(); }
-            ptr_type& returnType() { return _proto->returnType(); }
             std::unique_ptr<FunctionPrototype>& proto() { return _proto; }
             std::unique_ptr<CodeBlock>& codeBlock() { return _block; }
 
@@ -186,8 +184,6 @@ namespace rvm {
                 _proto(std::move(proto)) {}
 
             std::string name() { return _identifier.value<std::string>(); }
-            std::vector<std::unique_ptr<FunctionArgument> >& args() { return _proto->args(); }
-            ptr_type& returnType() { return _proto->returnType(); }
             std::unique_ptr<FunctionPrototype>& proto() { return _proto; }
 
             void visit(ModuleMemberVisitor* visitor) override { visitor->on(this); }
@@ -195,11 +191,11 @@ namespace rvm {
 
         class FunctionArgument : public Typed {
             Token _identifier;
-            ptr_type _type;
+            ptr_typeExp _type;
         public:
-            FunctionArgument(Token identifier, ptr_type type) : _identifier(identifier), _type(move(type)) {}
+            FunctionArgument(Token identifier, ptr_typeExp type) : _identifier(identifier), _type(move(type)) {}
             std::string name() { return _identifier.value<std::string>(); }
-            ptr_type& type() { return _type; }
+            ptr_typeExp& typeAnnotation() { return _type; }
         };
 
         class TypeExpression : public Typed {
@@ -243,16 +239,16 @@ namespace rvm {
 
         class ConstStatement : public Statement {
             Token _identifier;
-            ptr_type _type;
+            ptr_typeExp _typeAnnotation;
             ptr_value _value;
         public:
-            ConstStatement(Token identifier, ptr_type type, ptr_value value) :
+            ConstStatement(Token identifier, ptr_typeExp typeAnnotation, ptr_value value) :
                 _identifier(identifier),
-                _type(move(type)),
+                _typeAnnotation(move(typeAnnotation)),
                 _value(move(value)) {}
 
             std::string name() { return _identifier.value<std::string>(); }
-            ptr_type& type() { return _type; }
+            ptr_typeExp& typeAnnotation() { return _typeAnnotation; }
             ptr_value& value() { return _value; }
             void visit(StatementVisitor* visitor) override { visitor->on(this); }
         };
