@@ -5,14 +5,14 @@
 
 namespace rvm {
     namespace type {
-        
-        class FunctionSignature;
+
+        class SignatureType;
 
         class Type {
-            std::vector<FunctionSignature*> _functionSignatureTypes;
+            std::vector<SignatureType*> _callSignatures;
         public:
-            Type() : _functionSignatureTypes() {}
-            virtual std::vector<FunctionSignature*>& functionSignatureTypes() { return _functionSignatureTypes; }
+            Type() : _callSignatures() {}
+            virtual std::vector<SignatureType*>& callSignatures() { return _callSignatures; }
         };
 
         class PrimitiveType : public Type {
@@ -30,6 +30,7 @@ namespace rvm {
             Type type() { return _type; }
         };
 
+        /// A function signature type.
         class SignatureType : public Type {
             Type* _returnType;
             std::vector<Type*> _argumentTypes;

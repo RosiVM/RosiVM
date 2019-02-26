@@ -46,7 +46,6 @@ namespace rvm {
             proto->returnTypeAnnotation()->visit(this);
             rvm::type::Type* returnType = proto->returnTypeAnnotation()->type();
 
-            // TODO: Normalize and unique types.
             auto type = std::make_unique<rvm::type::SignatureType>(returnType, std::move(argumentTypes));
             proto->setType(type.get());
             _types.push_back(std::move(type));
@@ -128,9 +127,9 @@ namespace rvm {
 
             // TODO: This should force the Symbol to typecheck its functions and function declarations.
             // TODO: This should probably include "declaration + function signature", otherwise the emitter won't know the function name and how to name mangle for the linker. Calling convention?
-            auto& callTypes = functionType->functionSignatureTypes();
-            if (callTypes.size() == 0)
-                assert(false); // TODO: CompilerError!
+            auto& overloads = functionType->callSignatures();
+            if (overloads.size() == 0)
+                assert(false); // TODO: CompilerError! Not callable...
 
             // TODO: Make union types for the argument values to provide as context when resolving values.
             std::vector<rvm::type::Type*> values;
@@ -140,7 +139,8 @@ namespace rvm {
             }
 
             // Now having the values and their types, resolve an overload... or throw.
-            for (auto& callType : callTypes) {
+            for (auto& overload : overloads) {
+                // TODO: Create ReferenceType... expression->operand()->setType(overload);
             }
 
             // TODO: expression->setType(overload->returnType());
@@ -164,7 +164,7 @@ namespace rvm {
                     auto lType = expression->lhs()->type();
                     auto rType = expression->rhs()->type();
 
-                    // float + float = float
+                    // TODO: float + float = float
                     throw CompilerError(ErrorCode::BinaryExpressionTypeError, expression->span());
                 }
                 default: throw CompilerError(ErrorCode::BinaryExpressionTypeError, expression->span());

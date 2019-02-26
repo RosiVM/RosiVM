@@ -16,6 +16,16 @@ namespace rvm {
         Symbol(std::string name) : _declarations(), _name(name) {}
         void add(rvm::ast::ModuleMember* declaration) { _declarations.push_back(declaration); }
     };
+
+    class Reference : public rvm::type::Type {
+        Symbol* _symbol;
+        // Declarations;
+        // Type;
+    public:
+        Reference(Symbol* symbol) : _symbol(symbol) {}
+
+        Symbol* symbol() { return _symbol; }
+    };
 };
 
 #endif
