@@ -100,7 +100,8 @@ namespace rvm {
         }
         void on(rvm::ast::ReturnStatement* statement) override {
             // TODO:
-            assert(false);
+            // assert(false);
+            exit(1);
         }
         void on(rvm::ast::IdentifierExpression* expression) override {
             Symbol* symbol = _currentScope->lookup(expression->name());
@@ -114,12 +115,16 @@ namespace rvm {
                 case TokenType::Integer: expression->setType(rvm::type::getInt()); break;
                 case TokenType::SingleQuotesString: expression->setType(rvm::type::getString()); break;
                 case TokenType::DoubleQuotesString: expression->setType(rvm::type::getString()); break;
-                default: assert(false); break;
+                default:
+                    exit(1);
+                    // assert(false);
+                    break;
             }
         }
         void on(rvm::ast::MemberAccessExpression* expression) override {
             // TODO:
-            assert(false);
+            exit(1);
+            // assert(false);
         }
         void on(rvm::ast::InvocationExpression* expression) override {
             expression->operand()->visit(this);
@@ -129,7 +134,8 @@ namespace rvm {
             // TODO: This should probably include "declaration + function signature", otherwise the emitter won't know the function name and how to name mangle for the linker. Calling convention?
             auto& overloads = functionType->callSignatures();
             if (overloads.size() == 0)
-                assert(false); // TODO: CompilerError! Not callable...
+                exit(1);
+                // assert(false); // TODO: CompilerError! Not callable...
 
             // TODO: Make union types for the argument values to provide as context when resolving values.
             std::vector<rvm::type::Type*> values;
@@ -144,15 +150,18 @@ namespace rvm {
             }
 
             // TODO: expression->setType(overload->returnType());
-            assert(false);
+            // assert(false);
+            exit(1);
         }
         void on(rvm::ast::ConditionalIfExpression* expression) override {
             // TODO:
-            assert(false);
+            // assert(false);
+            exit(1);
         }
         void on(rvm::ast::UnaryExpression* expression) override {
             // TODO:
-            assert(false);
+            exit(1);
+            // assert(false);
         }
         void on(rvm::ast::BinaryExpression* expression) override {
             // TODO:

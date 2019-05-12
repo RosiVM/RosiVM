@@ -264,7 +264,7 @@ namespace rvm {
         class ValueExpression : public Statement, public Typed {
         public:
             ValueExpression() {}
-            virtual ushort precedence() = 0;
+            virtual unsigned short precedence() = 0;
         };
 
         class UnaryExpression : public ValueExpression {
@@ -297,7 +297,7 @@ namespace rvm {
         public:\
             CLASS(ptr_value operand, Token token) : UnaryExpression(move(operand), token) {}\
             CLASS(Token token, ptr_value operand) : UnaryExpression(token, move(operand)) {}\
-            ushort precedence() override { return PRECEDENCE; }\
+            unsigned short precedence() override { return PRECEDENCE; }\
             UnaryOperator op() override { return OPERATOR; }\
             void visit(StatementVisitor* visitor) override { visitor->on(this); }\
         };\
@@ -306,7 +306,7 @@ namespace rvm {
         class CLASS : public BinaryExpression {\
         public:\
             CLASS(ptr_value lhs, Token token, ptr_value rhs) : BinaryExpression(move(lhs), token, move(rhs)) {}\
-            ushort precedence() override { return PRECEDENCE; }\
+            unsigned short precedence() override { return PRECEDENCE; }\
             BinaryOperator op() override { return OPERATOR; }\
             void visit(StatementVisitor* visitor) override { visitor->on(this); }\
         };\
@@ -337,7 +337,7 @@ namespace rvm {
             ptr_value& thenExpression() { return _thenExp; }
             ptr_value& elseExpression() { return _elseExp; }
 
-            ushort precedence() override { return 1; }
+            unsigned short precedence() override { return 1; }
             void visit(StatementVisitor* visitor) override { visitor->on(this); }
         };
 
@@ -393,7 +393,7 @@ namespace rvm {
         public:
             IdentifierExpression(Token identifier) : _identifier(identifier) {}
             std::string name() { return _identifier.value<std::string>(); }
-            ushort precedence() override { return 13; }
+            unsigned short precedence() override { return 13; }
             void visit(StatementVisitor* visitor) override { visitor->on(this); }
             SourceSpan span() { return _identifier.span(); } 
         };
@@ -401,7 +401,7 @@ namespace rvm {
             Token _literal;
         public:
             ConstantValueExpression(Token literal) : _literal(literal) {}
-            ushort precedence() override { return 13; }
+            unsigned short precedence() override { return 13; }
             Token literal() { return _literal; }
             void visit(StatementVisitor* visitor) override { visitor->on(this); }
         };
@@ -412,7 +412,7 @@ namespace rvm {
             MemberAccessExpression(ptr_value operand, Token name) : _operand(move(operand)), _name(name) {}
             ptr_value& operand() { return _operand; }
             std::string name() { return _name.value<std::string>(); }
-            ushort precedence() override { return 13; }
+            unsigned short precedence() override { return 13; }
             void visit(StatementVisitor* visitor) override { visitor->on(this); }
         };
         class InvocationExpression : public ValueExpression {
@@ -421,7 +421,7 @@ namespace rvm {
         public:
             InvocationExpression(ptr_value lhs, std::vector<ptr_value> values) : _operand(move(lhs)), _values(move(values)) {}
             ptr_value& operand() { return _operand; }
-            ushort precedence() override { return 13; }
+            unsigned short precedence() override { return 13; }
             std::vector<ptr_value>& values() { return _values; }
             void visit(StatementVisitor* visitor) override { visitor->on(this); }
         };

@@ -4,7 +4,67 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "build",
+            "label": "buildWin32",
+            "type": "shell",
+            "command": "clang-cl",
+            "args": [
+                "/MD",
+                "/std:c++17",
+
+                "/Zi", // PDB, look fo info on: Z7, Zi or ZI...
+
+                "/o", "bin/ggcode.exe",
+
+                "src/lexer.cpp",
+                "src/source.cpp",
+                "src/parser.cpp",
+                "src/namescope.cpp",
+                "src/binder.cpp",
+                "src/symbol.cpp",
+                "src/print.cpp",
+                "src/ast.cpp",
+                "src/types.cpp",
+                "src/symbol.cpp",
+                "src/typechecker.cpp",
+                "src/compiler.cpp",
+
+                // Visual Studio C++17 deprecated iterator base class
+                "-D_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING",
+
+                // Config required for LLVM, see `llvm-config --cxxflags --ldflags --system-libs --libs all`
+                "-ID:\\proj\\llvm-8.0.0.build\\include",
+                "-ID:\\proj\\llvm-8.0.0.src\\include",
+
+                // "/EHs-c-", // The front-end uses exceptions... so EHsc
+                "/EHsc",
+                "/GR-",
+                "-D_CRT_SECURE_NO_DEPRECATE",
+                "-D_CRT_SECURE_NO_WARNINGS",
+                "-D_CRT_NONSTDC_NO_DEPRECATE",
+                "-D_CRT_NONSTDC_NO_WARNINGS",
+                "-D_SCL_SECURE_NO_DEPRECATE",
+                "-D_SCL_SECURE_NO_WARNINGS",
+                "-DUNICODE",
+                "-D_UNICODE",
+                "-D__STDC_CONSTANT_MACROS",
+                "-D__STDC_FORMAT_MACROS",
+                "-D__STDC_LIMIT_MACROS",
+
+                "/link",
+
+                "/LIBPATH:D:\\proj\\llvm-8.0.0.build\\Release\\lib",
+
+                "LLVMTableGen.lib", "LLVMMIRParser.lib", "LLVMObjectYAML.lib", "LLVMCoverage.lib", "LLVMMCA.lib", "LLVMXRay.lib", "LLVMLibDriver.lib", "LLVMFuzzMutate.lib", "LLVMLineEditor.lib", "LLVMDlltoolDriver.lib", "LLVMOption.lib", "LLVMXCoreDisassembler.lib", "LLVMXCoreCodeGen.lib", "LLVMXCoreDesc.lib", "LLVMXCoreInfo.lib", "LLVMXCoreAsmPrinter.lib", "LLVMWebAssemblyDisassembler.lib", "LLVMWebAssemblyCodeGen.lib", "LLVMWebAssemblyDesc.lib", "LLVMWebAssemblyAsmPrinter.lib", "LLVMWebAssemblyAsmParser.lib", "LLVMWebAssemblyInfo.lib", "LLVMSystemZDisassembler.lib", "LLVMSystemZCodeGen.lib", "LLVMSystemZAsmParser.lib", "LLVMSystemZDesc.lib", "LLVMSystemZInfo.lib", "LLVMSystemZAsmPrinter.lib", "LLVMSparcDisassembler.lib", "LLVMSparcCodeGen.lib", "LLVMSparcAsmParser.lib", "LLVMSparcDesc.lib", "LLVMSparcInfo.lib", "LLVMSparcAsmPrinter.lib", "LLVMPowerPCDisassembler.lib", "LLVMPowerPCCodeGen.lib", "LLVMPowerPCAsmParser.lib", "LLVMPowerPCDesc.lib", "LLVMPowerPCInfo.lib", "LLVMPowerPCAsmPrinter.lib", "LLVMNVPTXCodeGen.lib", "LLVMNVPTXDesc.lib", "LLVMNVPTXInfo.lib", "LLVMNVPTXAsmPrinter.lib", "LLVMMSP430Disassembler.lib", "LLVMMSP430CodeGen.lib", "LLVMMSP430AsmParser.lib", "LLVMMSP430Desc.lib", "LLVMMSP430Info.lib", "LLVMMSP430AsmPrinter.lib", "LLVMMipsDisassembler.lib", "LLVMMipsCodeGen.lib", "LLVMMipsAsmParser.lib", "LLVMMipsDesc.lib", "LLVMMipsInfo.lib", "LLVMMipsAsmPrinter.lib", "LLVMLanaiDisassembler.lib", "LLVMLanaiCodeGen.lib", "LLVMLanaiAsmParser.lib", "LLVMLanaiDesc.lib", "LLVMLanaiAsmPrinter.lib", "LLVMLanaiInfo.lib", "LLVMHexagonDisassembler.lib", "LLVMHexagonCodeGen.lib", "LLVMHexagonAsmParser.lib", "LLVMHexagonDesc.lib", "LLVMHexagonInfo.lib", "LLVMBPFDisassembler.lib", "LLVMBPFCodeGen.lib", "LLVMBPFAsmParser.lib", "LLVMBPFDesc.lib", "LLVMBPFInfo.lib", "LLVMBPFAsmPrinter.lib", "LLVMARMDisassembler.lib", "LLVMARMCodeGen.lib", "LLVMARMAsmParser.lib", "LLVMARMDesc.lib", "LLVMARMInfo.lib", "LLVMARMAsmPrinter.lib", "LLVMARMUtils.lib", "LLVMAMDGPUDisassembler.lib", "LLVMAMDGPUCodeGen.lib", "LLVMAMDGPUAsmParser.lib", "LLVMAMDGPUDesc.lib", "LLVMAMDGPUInfo.lib", "LLVMAMDGPUAsmPrinter.lib", "LLVMAMDGPUUtils.lib", "LLVMAArch64Disassembler.lib", "LLVMAArch64CodeGen.lib", "LLVMAArch64AsmParser.lib", "LLVMAArch64Desc.lib", "LLVMAArch64Info.lib", "LLVMAArch64AsmPrinter.lib", "LLVMAArch64Utils.lib", "LLVMWindowsManifest.lib", "LLVMCoroutines.lib", "LLVMX86Disassembler.lib", "LLVMX86AsmParser.lib", "LLVMX86CodeGen.lib", "LLVMGlobalISel.lib", "LLVMSelectionDAG.lib", "LLVMAsmPrinter.lib", "LLVMX86Desc.lib", "LLVMMCDisassembler.lib", "LLVMX86Info.lib", "LLVMX86AsmPrinter.lib", "LLVMX86Utils.lib", "LLVMMCJIT.lib", "LLVMOrcJIT.lib", "LLVMTextAPI.lib", "LLVMLTO.lib", "LLVMPasses.lib", "LLVMObjCARCOpts.lib", "LLVMipo.lib", "LLVMInstrumentation.lib", "LLVMVectorize.lib", "LLVMLinker.lib", "LLVMIRReader.lib", "LLVMAsmParser.lib", "LLVMInterpreter.lib", "LLVMExecutionEngine.lib", "LLVMRuntimeDyld.lib", "LLVMCodeGen.lib", "LLVMTarget.lib", "LLVMScalarOpts.lib", "LLVMInstCombine.lib", "LLVMAggressiveInstCombine.lib", "LLVMTransformUtils.lib", "LLVMBitWriter.lib", "LLVMAnalysis.lib", "LLVMProfileData.lib", "LLVMSymbolize.lib", "LLVMDebugInfoPDB.lib", "LLVMDebugInfoDWARF.lib", "LLVMObject.lib", "LLVMMCParser.lib", "LLVMMC.lib", "LLVMDebugInfoCodeView.lib", "LLVMDebugInfoMSF.lib", "LLVMBitReader.lib", "LLVMCore.lib", "LLVMBinaryFormat.lib", "LLVMOptRemarks.lib", "LLVMSupport.lib", "LLVMDemangle.lib",
+
+                "psapi.lib",
+                "shell32.lib",
+                "ole32.lib",
+                "uuid.lib",
+                "advapi32.lib"
+            ]
+        },
+        {
+            "label": "buildMacOS",
             "type": "shell",
             "command": "clang++",
             "args": [

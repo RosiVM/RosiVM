@@ -5,17 +5,29 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug",
+            "name": "Debug Win32",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bin/ggcode.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": true,
+            "preLaunchTask": "buildWin32"
+        },
+        {
+            "name": "Debug MacOS",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/bin/ggcode",
+            "program": "${workspaceFolder}/bin/ggcode.exe",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": false,
             "MIMode": "lldb",
-            "preLaunchTask": "build"
+            "preLaunchTask": "buildMacOS"
         }
     ]
 }

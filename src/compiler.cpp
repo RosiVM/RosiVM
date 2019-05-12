@@ -46,12 +46,34 @@ void testSimpleProgram3() {
     printTokens(program);
 }
 
+void testSimpleProgramAST1() {
+    string program = ""s
+        "declare function sin(angle: float): float;\r\n"s
+        "declare function cos(angle: float): float;\r\n"s
+        "function main(): float {\r\n"s
+        "    const x = sin(15.0) + cos(15.0) * 2;"s
+        "    const y = 2 * sin(15.0) + cos(15.0);"s
+        "    return x;"s
+        "}"s;
+
+    Lexer lexer(program);
+    printTokens(program);
+    cout << "====================" << endl;
+
+    Parser module(program);
+    module.parseModule();
+
+    ASTPrinter printer;
+    module.visit(&printer);
+}
+
 // #include "llvm/ADT/APFloat.h"
 // #include "llvm/ADT/STLExtras.h"
 // #include "llvm/IR/BasicBlock.h"
 // #include "llvm/IR/Constants.h"
 // #include "llvm/IR/DerivedTypes.h"
 // #include "llvm/IR/Function.h"
+
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
@@ -69,7 +91,7 @@ static std::unique_ptr<Module> TheModule;
 class LLIRCompiler : public ModuleMemberVisitor {
 public:
     void on(rvm::ast::Function* f) override {
-        cout << "compile " << f->name() << endl;
+        // cout << "compile " << f->name() << endl;
 
         // Make the function type:  double(double,double) etc.
         std::vector<Type*> Doubles(f->proto()->args().size(), Type::getFloatTy(TheContext));
@@ -84,7 +106,7 @@ public:
     }
 
     void on(rvm::ast::FunctionDeclaration* f) override {
-        cout << "compile " << f->name() << endl;
+        // cout << "compile " << f->name() << endl;
 
         // Make the function type:  double(double,double) etc.
         std::vector<Type*> Doubles(f->proto()->args().size(), Type::getFloatTy(TheContext));
@@ -99,7 +121,7 @@ public:
     }
 };
 
-void testSimpleProgramAST1() {
+void testSimpleProgramLLVM() {
     string program = ""
         "declare function sin(angle: float): float;\r\n"s
         "declare function cos(angle: float): float;\r\n"s
@@ -122,8 +144,8 @@ void testSimpleProgramAST1() {
     Binder globalSymbols;
     module.visit(&globalSymbols);
 
-    TypeChecker typeChecker(&globalSymbols);
-    typeChecker.check(&module);
+    // TypeChecker typeChecker(&globalSymbols);
+    // typeChecker.check(&module);
 
     // parser.visit(&typeChecker);
 
@@ -140,6 +162,12 @@ int main(int argl, char** argv) {
     // testSimpleProgram2();
     // cout << "testSimpleProgram3" << endl;
     // testSimpleProgram3();
+    // cout << "testSimpleProgramAST1" << endl;
+    // testSimpleProgramAST1();
 
-    testSimpleProgramAST1();
+    cout << "testSimpleProgramLLVM" << endl;
+    testSimpleProgramLLVM();
+
+    char c;
+    cin >> c;
 }
