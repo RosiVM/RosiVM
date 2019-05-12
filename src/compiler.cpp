@@ -144,10 +144,10 @@ void testSimpleProgramLLVM() {
     Binder globalSymbols;
     module.visit(&globalSymbols);
 
-    // TypeChecker typeChecker(&globalSymbols);
-    // typeChecker.check(&module);
+    TypeChecker typeChecker(&globalSymbols);
+    typeChecker.check(&module);
 
-    // parser.visit(&typeChecker);
+    module.visit(&typeChecker);
 
     TheModule = llvm::make_unique<Module>("my cool jit", TheContext);
     LLIRCompiler llirCompiler;

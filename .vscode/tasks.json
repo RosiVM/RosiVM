@@ -27,6 +27,7 @@
                 "src/symbol.cpp",
                 "src/typechecker.cpp",
                 "src/compiler.cpp",
+                "src/llvmemitter.cpp",
 
                 // Visual Studio C++17 deprecated iterator base class
                 "-D_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING",
@@ -84,6 +85,7 @@
                 "src/symbol.cpp",
                 "src/typechecker.cpp",
                 "src/compiler.cpp",
+                "src/llvmemitter.cpp",
 
                 "-o",
                 "bin/ggcode",
